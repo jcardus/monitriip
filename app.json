@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Monitriip Driver",
+    "slug": "monitriip-driver",
+    "scheme": "monitriipdriver",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.monitriip.driver",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "package": "com.monitriip.driver",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Monitriip Driver to collect GPS during an active bus trip for ANTT compliance records.",
+          "locationWhenInUsePermission": "Allow Monitriip Driver to confirm your bus position while you prepare or operate a trip.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
+    ],
+    "extra": {
+      "monitriipGpsEndpoint": ""
+    }
+  }
+}
