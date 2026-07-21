@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo/metro-runtime": "^56.0.17",
     "@react-native-async-storage/async-storage": "~2.2.0",
     "expo": "~56.0.0",
     "expo-constants": "~18.0.0",
@@ -17,10 +18,13 @@
     "expo-status-bar": "~3.0.0",
     "expo-task-manager": "~14.0.0",
     "react": "19.1.0",
-    "react-native": "0.81.0"
+    "react-dom": "^19.1.0",
+    "react-native": "0.81.0",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "sharp": "^0.35.3",
     "typescript": "~5.9.0"
   }
 }

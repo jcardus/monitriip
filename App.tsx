@@ -3,7 +3,7 @@ import Constants from "expo-constants";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Linking,
@@ -21,6 +21,10 @@ const LOCATION_TASK = "monitriip-background-location";
 const TRIP_KEY = "monitriip.activeTrip";
 const GPS_QUEUE_KEY = "monitriip.gpsQueue";
 const EVENT_QUEUE_KEY = "monitriip.eventQueue";
+const DEVICE_KEY = "monitriip.selectedDevice";
+const EMULATOR_INTERVAL_MS = 15000;
+
+type ScreenshotScenario = "active" | "evidence";
 
 type TripStatus = "draft" | "active" | "finished";
 
@@ -31,6 +35,7 @@ type Trip = {
   vehiclePlate: string;
   serviceOrder: string;
   routeCode: string;
+  trackingDeviceId: string;
   origin: string;
   destination: string;
   startedAt?: string;
@@ -41,6 +46,9 @@ type Trip = {
 type GpsSample = {
   id: string;
   tripId: string;
+  deviceId: string;
+  deviceLabel: string;
+  source: "native-location" | "device-emulator";
   capturedAt: string;
   latitude: number;
   longitude: number;
@@ -48,6 +56,13 @@ type GpsSample = {
   speed: number | null;
   heading: number | null;
   altitude: number | null;
+};
+
+type TrackingDevice = {
+  id: string;
+  label: string;
+  imei: string;
+  vehiclePlate: string;
 };
 
 type EventRecord = {
@@ -70,10 +85,105 @@ const emptyTrip: Trip = {
   vehiclePlate: "",
   serviceOrder: "",
   routeCode: "",
+  trackingDeviceId: "",
   origin: "",
   destination: "",
   status: "draft"
 };
+
+const trackingDevices: TrackingDevice[] = [
+  {
+    id: "mxt-001",
+    label: "Rastreador MXT-001",
+    imei: "864507061234001",
+    vehiclePlate: "BUS7A21"
+  },
+  {
+    id: "mxt-002",
+    label: "Rastreador MXT-002",
+    imei: "864507061234002",
+    vehiclePlate: "BUS8B32"
+  },
+  {
+    id: "mxt-003",
+    label: "Rastreador MXT-003",
+    imei: "864507061234003",
+    vehiclePlate: "BUS9C43"
+  }
+];
+
+const emulatedRoute = [
+  { latitude: -22.9068, longitude: -43.1729 },
+  { latitude: -22.827, longitude: -43.053 },
+  { latitude: -22.745, longitude: -42.875 },
+  { latitude: -22.591, longitude: -42.452 },
+  { latitude: -22.507, longitude: -41.95 },
+  { latitude: -22.673, longitude: -41.324 },
+  { latitude: -22.875, longitude: -40.842 },
+  { latitude: -23.03, longitude: -40.255 },
+  { latitude: -23.245, longitude: -39.731 },
+  { latitude: -23.5505, longitude: -46.6333 }
+];
+
+const screenshotTrip: Trip = {
+  id: "trip-20260721-rjsp",
+  driverName: "CARLOS ALMEIDA",
+  driverCpf: "12345678901",
+  vehiclePlate: "BUS7A21",
+  serviceOrder: "OS-2026-0714",
+  routeCode: "RJ-SP-430",
+  trackingDeviceId: "mxt-001",
+  origin: "RIO DE JANEIRO",
+  destination: "SAO PAULO",
+  startedAt: "2026-07-21T08:35:00.000Z",
+  status: "active"
+};
+
+const screenshotEvents: EventRecord[] = [
+  {
+    id: "boarding-demo",
+    tripId: screenshotTrip.id,
+    type: "boarding",
+    createdAt: "2026-07-21T09:18:00.000Z",
+    title: "Assento 18",
+    detail: "Documento do passageiro MG1234567"
+  },
+  {
+    id: "occurrence-demo",
+    tripId: screenshotTrip.id,
+    type: "occurrence",
+    createdAt: "2026-07-21T11:42:00.000Z",
+    title: "Ocorrência operacional",
+    detail: "Fiscalização concluída no posto BR-116 KM 184."
+  }
+];
+
+const screenshotGpsQueue = Array.from({ length: 248 }, (_, index) => ({
+  id: `gps-demo-${index}`,
+  tripId: screenshotTrip.id,
+  deviceId: "mxt-001",
+  deviceLabel: "Rastreador MXT-001",
+  source: "device-emulator" as const,
+  capturedAt: new Date(Date.UTC(2026, 6, 21, 8, 35, index * 15)).toISOString(),
+  latitude: -22.9068 + index * 0.001,
+  longitude: -43.1729 + index * 0.001,
+  accuracy: 8,
+  speed: 22,
+  heading: 245,
+  altitude: 12
+}));
+
+function getScreenshotScenario(): ScreenshotScenario | null {
+  const maybeLocation = globalThis as unknown as { location?: { search?: string } };
+  const search = maybeLocation.location?.search;
+
+  if (!search) {
+    return null;
+  }
+
+  const scenario = new URLSearchParams(search).get("screenshot");
+  return scenario === "active" || scenario === "evidence" ? scenario : null;
+}
 
 TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (error) {
@@ -87,10 +197,18 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     return;
   }
 
+  const deviceRaw = await AsyncStorage.getItem(DEVICE_KEY);
+  const selectedDevice = deviceRaw
+    ? (JSON.parse(deviceRaw) as TrackingDevice)
+    : trackingDevices.find((device) => device.id === trip.trackingDeviceId) || trackingDevices[0];
+
   const { locations } = data as LocationTaskData;
   const samples = locations.map<GpsSample>((location) => ({
     id: `${trip.id}-${location.timestamp}`,
     tripId: trip.id,
+    deviceId: selectedDevice.id,
+    deviceLabel: selectedDevice.label,
+    source: "native-location",
     capturedAt: new Date(location.timestamp).toISOString(),
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
@@ -168,14 +286,17 @@ async function flushGpsQueue() {
 }
 
 export default function App() {
-  const [trip, setTrip] = useState<Trip>(emptyTrip);
-  const [events, setEvents] = useState<EventRecord[]>([]);
-  const [gpsQueue, setGpsQueue] = useState<GpsSample[]>([]);
-  const [permissionStatus, setPermissionStatus] = useState("Not checked");
-  const [passengerDoc, setPassengerDoc] = useState("");
-  const [seat, setSeat] = useState("");
-  const [occurrence, setOccurrence] = useState("");
-  const [lastSync, setLastSync] = useState("Never");
+  const screenshotScenario = getScreenshotScenario();
+  const [trip, setTrip] = useState<Trip>(screenshotScenario ? screenshotTrip : emptyTrip);
+  const [events, setEvents] = useState<EventRecord[]>(screenshotScenario ? screenshotEvents : []);
+  const [gpsQueue, setGpsQueue] = useState<GpsSample[]>(screenshotScenario === "active" ? screenshotGpsQueue : []);
+  const [permissionStatus, setPermissionStatus] = useState(screenshotScenario ? "autorizada em primeiro e segundo plano" : "Não verificada");
+  const [passengerDoc, setPassengerDoc] = useState(screenshotScenario === "evidence" ? "MG1234567" : "");
+  const [seat, setSeat] = useState(screenshotScenario === "evidence" ? "18" : "");
+  const [occurrence, setOccurrence] = useState(
+    screenshotScenario === "evidence" ? "Fiscalização rodoviária concluída no posto BR-116 KM 184. Viagem seguiu sem atraso." : ""
+  );
+  const [lastSync, setLastSync] = useState(screenshotScenario === "evidence" ? "16:22 - enviados 248" : "Nunca");
 
   const active = trip.status === "active";
 
@@ -184,7 +305,7 @@ export default function App() {
       return "No route set";
     }
 
-    return `${trip.origin || "Origin"} to ${trip.destination || "Destination"}`;
+    return `${trip.origin || "Origem"} para ${trip.destination || "Destino"}`;
   }, [trip.destination, trip.origin]);
 
   const refreshQueues = useCallback(async () => {
@@ -194,6 +315,10 @@ export default function App() {
 
   useEffect(() => {
     async function boot() {
+      if (screenshotScenario) {
+        return;
+      }
+
       const storedTrip = await readJson<Trip | null>(TRIP_KEY, null);
       if (storedTrip) {
         setTrip(storedTrip);
@@ -202,11 +327,11 @@ export default function App() {
       await refreshQueues();
       const foreground = await Location.getForegroundPermissionsAsync();
       const background = await Location.getBackgroundPermissionsAsync();
-      setPermissionStatus(`${foreground.status} foreground, ${background.status} background`);
+      setPermissionStatus(`${foreground.status} primeiro plano, ${background.status} segundo plano`);
     }
 
     boot();
-  }, [refreshQueues]);
+  }, [refreshQueues, screenshotScenario]);
 
   async function persistTrip(nextTrip: Trip) {
     setTrip(nextTrip);
@@ -230,15 +355,15 @@ export default function App() {
     }
 
     const background = await Location.requestBackgroundPermissionsAsync();
-    setPermissionStatus(`${foreground.status} foreground, ${background.status} background`);
+      setPermissionStatus(`${foreground.status} primeiro plano, ${background.status} segundo plano`);
 
     if (background.status !== "granted") {
       Alert.alert(
-        "Background location required",
-        "Enable Always Allow/Allow all the time so GPS evidence can continue during an active trip.",
+        "Localização em segundo plano obrigatória",
+        "Ative Sempre/Permitir o tempo todo para manter as evidências de GPS durante a viagem.",
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Open settings", onPress: () => Linking.openSettings() }
+          { text: "Cancelar", style: "cancel" },
+          { text: "Abrir ajustes", onPress: () => Linking.openSettings() }
         ]
       );
       return false;
@@ -249,7 +374,7 @@ export default function App() {
 
   async function startTrip() {
     if (!trip.driverCpf || !trip.vehiclePlate || !trip.serviceOrder || !trip.origin || !trip.destination) {
-      Alert.alert("Trip setup incomplete", "Driver CPF, plate, service order, origin, and destination are required.");
+      Alert.alert("Preparação incompleta", "CPF do motorista, placa, ordem de serviço, origem e destino são obrigatórios.");
       return;
     }
 
@@ -276,8 +401,8 @@ export default function App() {
       pausesUpdatesAutomatically: false,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
-        notificationTitle: "Monitriip trip active",
-        notificationBody: "Collecting GPS evidence for the active bus trip.",
+        notificationTitle: "Viagem Monitriip ativa",
+        notificationBody: "Coletando evidências de GPS para a viagem em andamento.",
         notificationColor: "#0f766e"
       }
     });
@@ -302,7 +427,7 @@ export default function App() {
 
   async function recordBoarding() {
     if (!active || !passengerDoc || !seat) {
-      Alert.alert("Boarding not recorded", "Start a trip and enter passenger document plus seat.");
+      Alert.alert("Embarque não registrado", "Inicie a viagem e informe documento do passageiro e assento.");
       return;
     }
 
@@ -311,8 +436,8 @@ export default function App() {
       tripId: trip.id,
       type: "boarding",
       createdAt: new Date().toISOString(),
-      title: `Seat ${seat.toUpperCase()}`,
-      detail: `Passenger document ${passengerDoc.toUpperCase()}`
+      title: `Assento ${seat.toUpperCase()}`,
+      detail: `Documento do passageiro ${passengerDoc.toUpperCase()}`
     });
     setPassengerDoc("");
     setSeat("");
@@ -321,7 +446,7 @@ export default function App() {
 
   async function recordOccurrence() {
     if (!active || !occurrence) {
-      Alert.alert("Occurrence not recorded", "Start a trip and describe the occurrence.");
+      Alert.alert("Ocorrência não registrada", "Inicie a viagem e descreva a ocorrência.");
       return;
     }
 
@@ -330,7 +455,7 @@ export default function App() {
       tripId: trip.id,
       type: "occurrence",
       createdAt: new Date().toISOString(),
-      title: "Operational occurrence",
+      title: "Ocorrência operacional",
       detail: occurrence
     });
     setOccurrence("");
@@ -341,18 +466,18 @@ export default function App() {
     try {
       const result = await flushGpsQueue();
       await refreshQueues();
-      setLastSync(`${new Date().toLocaleTimeString()} - sent ${result.sent}`);
+      setLastSync(`${new Date().toLocaleTimeString()} - enviados ${result.sent}`);
     } catch (error) {
-      setLastSync(`${new Date().toLocaleTimeString()} - sync failed`);
-      Alert.alert("Sync failed", error instanceof Error ? error.message : "GPS queue remains stored on device.");
+      setLastSync(`${new Date().toLocaleTimeString()} - falha ao sincronizar`);
+      Alert.alert("Falha na sincronização", error instanceof Error ? error.message : "A fila de GPS continua salva no aparelho.");
     }
   }
 
   const exportPayload = JSON.stringify(
     {
       trip,
-      gpsPending: gpsQueue,
-      events
+      gpsPendente: gpsQueue,
+      eventos: events
     },
     null,
     2
@@ -364,71 +489,71 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.eyebrow}>ANTT Monitriip operations</Text>
-            <Text style={styles.title}>Driver Trip Console</Text>
+            <Text style={styles.eyebrow}>Operação ANTT Monitriip</Text>
+            <Text style={styles.title}>Console do Motorista</Text>
           </View>
           <View style={[styles.statusPill, active ? styles.statusActive : styles.statusIdle]}>
-            <Text style={styles.statusText}>{active ? "Tracking" : trip.status}</Text>
+            <Text style={styles.statusText}>{active ? "Rastreando" : trip.status === "finished" ? "Finalizada" : "Rascunho"}</Text>
           </View>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Trip setup</Text>
-          <Field label="Driver name" value={trip.driverName} onChangeText={(value) => updateTrip("driverName", value)} />
-          <Field label="Driver CPF" value={trip.driverCpf} onChangeText={(value) => updateTrip("driverCpf", value)} keyboardType="number-pad" />
-          <Field label="Vehicle plate" value={trip.vehiclePlate} onChangeText={(value) => updateTrip("vehiclePlate", value)} />
-          <Field label="Service order" value={trip.serviceOrder} onChangeText={(value) => updateTrip("serviceOrder", value)} />
-          <Field label="Route code" value={trip.routeCode} onChangeText={(value) => updateTrip("routeCode", value)} />
+          <Text style={styles.panelTitle}>Preparação da viagem</Text>
+          <Field label="Nome do motorista" value={trip.driverName} onChangeText={(value) => updateTrip("driverName", value)} />
+          <Field label="CPF do motorista" value={trip.driverCpf} onChangeText={(value) => updateTrip("driverCpf", value)} keyboardType="number-pad" />
+          <Field label="Placa do veículo" value={trip.vehiclePlate} onChangeText={(value) => updateTrip("vehiclePlate", value)} />
+          <Field label="Ordem de serviço" value={trip.serviceOrder} onChangeText={(value) => updateTrip("serviceOrder", value)} />
+          <Field label="Código da linha" value={trip.routeCode} onChangeText={(value) => updateTrip("routeCode", value)} />
           <View style={styles.row}>
             <View style={styles.flex}>
-              <Field label="Origin" value={trip.origin} onChangeText={(value) => updateTrip("origin", value)} />
+              <Field label="Origem" value={trip.origin} onChangeText={(value) => updateTrip("origin", value)} />
             </View>
             <View style={styles.flex}>
-              <Field label="Destination" value={trip.destination} onChangeText={(value) => updateTrip("destination", value)} />
+              <Field label="Destino" value={trip.destination} onChangeText={(value) => updateTrip("destination", value)} />
             </View>
           </View>
         </View>
 
         <View style={styles.summaryBand}>
           <Text style={styles.route}>{routeLabel}</Text>
-          <Text style={styles.meta}>Permissions: {permissionStatus}</Text>
-          <Text style={styles.meta}>GPS queued: {gpsQueue.length} samples</Text>
-          <Text style={styles.meta}>Last sync: {lastSync}</Text>
+          <Text style={styles.meta}>Permissões: {permissionStatus}</Text>
+          <Text style={styles.meta}>GPS na fila: {gpsQueue.length} pontos</Text>
+          <Text style={styles.meta}>Última sincronização: {lastSync}</Text>
           <View style={styles.actions}>
-            <ActionButton label="Start trip" onPress={startTrip} disabled={active} variant="primary" />
-            <ActionButton label="End trip" onPress={endTrip} disabled={!active} variant="danger" />
-            <ActionButton label="Sync" onPress={syncNow} />
+            <ActionButton label="Iniciar viagem" onPress={startTrip} disabled={active} variant="primary" />
+            <ActionButton label="Encerrar viagem" onPress={endTrip} disabled={!active} variant="danger" />
+            <ActionButton label="Sincronizar" onPress={syncNow} />
           </View>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Board passenger</Text>
+          <Text style={styles.panelTitle}>Embarcar passageiro</Text>
           <View style={styles.row}>
             <View style={styles.flex}>
-              <Field label="Document" value={passengerDoc} onChangeText={setPassengerDoc} />
+              <Field label="Documento" value={passengerDoc} onChangeText={setPassengerDoc} />
             </View>
             <View style={styles.seatField}>
-              <Field label="Seat" value={seat} onChangeText={setSeat} />
+              <Field label="Assento" value={seat} onChangeText={setSeat} />
             </View>
           </View>
-          <ActionButton label="Record boarding" onPress={recordBoarding} disabled={!active} variant="primary" />
+          <ActionButton label="Registrar embarque" onPress={recordBoarding} disabled={!active} variant="primary" />
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Occurrence</Text>
+          <Text style={styles.panelTitle}>Ocorrência</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={occurrence}
             onChangeText={setOccurrence}
             multiline
-            placeholder="Delay, inspection, route deviation, passenger issue..."
+            placeholder="Atraso, fiscalização, desvio de rota, atendimento a passageiro..."
             placeholderTextColor="#64748b"
           />
-          <ActionButton label="Record occurrence" onPress={recordOccurrence} disabled={!active} />
+          <ActionButton label="Registrar ocorrência" onPress={recordOccurrence} disabled={!active} />
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Trip evidence</Text>
+          <Text style={styles.panelTitle}>Evidências da viagem</Text>
           {events.slice(0, 6).map((event) => (
             <View key={event.id} style={styles.eventRow}>
               <Text style={styles.eventTitle}>{event.title}</Text>
@@ -436,11 +561,11 @@ export default function App() {
               <Text style={styles.eventTime}>{new Date(event.createdAt).toLocaleString()}</Text>
             </View>
           ))}
-          {events.length === 0 ? <Text style={styles.empty}>No passenger or occurrence records yet.</Text> : null}
+          {events.length === 0 ? <Text style={styles.empty}>Nenhum embarque ou ocorrência registrado ainda.</Text> : null}
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Export packet</Text>
+          <Text style={styles.panelTitle}>Pacote de exportação</Text>
           <Text selectable style={styles.codeBlock}>
             {exportPayload}
           </Text>

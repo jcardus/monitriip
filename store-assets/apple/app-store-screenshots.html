@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Capturas App Store Monitriip Driver</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+        background: #eef4f2;
+        color: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1290px;
+        height: 2796px;
+        margin: 0;
+        overflow: hidden;
+        background: #eef4f2;
+      }
+
+      body {
+        display: grid;
+        place-items: stretch;
+      }
+
+      .shot {
+        width: 1290px;
+        height: 2796px;
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(145deg, rgba(15, 118, 110, 0.15), rgba(20, 83, 45, 0) 46%),
+          linear-gradient(180deg, #f8fafc 0%, #eaf3f1 100%);
+        padding: 110px 80px 90px;
+      }
+
+      .topline {
+        color: #0f766e;
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 1040px;
+        margin: 22px 0 18px;
+        color: #07111f;
+        font-size: 96px;
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .subhead {
+        max-width: 980px;
+        margin: 0;
+        color: #334155;
+        font-size: 39px;
+        line-height: 1.28;
+        letter-spacing: 0;
+      }
+
+      .phone {
+        position: absolute;
+        left: 120px;
+        right: 120px;
+        bottom: 96px;
+        height: 1840px;
+        border: 7px solid #0f172a;
+        border-radius: 70px;
+        background: #f8fafc;
+        box-shadow: 0 34px 80px rgba(15, 23, 42, 0.22);
+        overflow: hidden;
+      }
+
+      .sensor {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        width: 260px;
+        height: 38px;
+        transform: translateX(-50%);
+        border-radius: 24px;
+        background: #0f172a;
+        z-index: 3;
+      }
+
+      .app {
+        height: 100%;
+        padding: 88px 34px 44px;
+        overflow: hidden;
+      }
+
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 22px;
+        margin-bottom: 24px;
+      }
+
+      .app-eyebrow {
+        color: #0f766e;
+        font-size: 25px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .app-title {
+        margin-top: 5px;
+        color: #0f172a;
+        font-size: 54px;
+        font-weight: 900;
+        letter-spacing: 0;
+      }
+
+      .pill {
+        min-width: 168px;
+        padding: 17px 21px;
+        border-radius: 18px;
+        background: #e2e8f0;
+        color: #0f172a;
+        font-size: 22px;
+        font-weight: 900;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .pill.live {
+        background: #dcfce7;
+      }
+
+      .panel,
+      .dark-panel {
+        border-radius: 22px;
+        padding: 30px;
+        margin-bottom: 20px;
+      }
+
+      .panel {
+        background: #ffffff;
+        border: 2px solid #dbe4eb;
+      }
+
+      .dark-panel {
+        background: #0f172a;
+      }
+
+      .panel-title {
+        margin: 0 0 18px;
+        color: #0f172a;
+        font-size: 36px;
+        font-weight: 900;
+      }
+
+      .dark-panel .panel-title,
+      .dark-panel .route {
+        color: #ffffff;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .field-grid.single {
+        grid-template-columns: 1fr;
+      }
+
+      .label {
+        margin-bottom: 8px;
+        color: #475569;
+        font-size: 22px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .value {
+        min-height: 76px;
+        border: 2px solid #cbd5e1;
+        border-radius: 18px;
+        padding: 19px 20px;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 31px;
+        font-weight: 700;
+      }
+
+      .route {
+        margin: 0 0 14px;
+        font-size: 42px;
+        font-weight: 900;
+      }
+
+      .meta {
+        margin: 9px 0;
+        color: #cbd5e1;
+        font-size: 27px;
+        line-height: 1.25;
+      }
+
+      .actions {
+        display: flex;
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .button {
+        min-height: 78px;
+        border-radius: 18px;
+        padding: 20px 24px;
+        background: #e2e8f0;
+        color: #0f172a;
+        font-size: 29px;
+        font-weight: 900;
+      }
+
+      .button.primary {
+        background: #0f766e;
+        color: #ffffff;
+      }
+
+      .button.danger {
+        background: #b91c1c;
+        color: #ffffff;
+      }
+
+      .map {
+        height: 470px;
+        border-radius: 24px;
+        margin: 12px 0 22px;
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(15, 118, 110, 0.16) 0 2px, transparent 2px 126px),
+          linear-gradient(0deg, rgba(15, 118, 110, 0.14) 0 2px, transparent 2px 126px),
+          #ecfdf5;
+      }
+
+      .route-line {
+        position: absolute;
+        left: 110px;
+        top: 260px;
+        width: 690px;
+        height: 13px;
+        transform: rotate(-12deg);
+        border-radius: 20px;
+        background: #0f766e;
+      }
+
+      .pin {
+        position: absolute;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #b91c1c;
+        border: 8px solid #ffffff;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+      }
+
+      .pin.a {
+        left: 160px;
+        top: 250px;
+      }
+
+      .pin.b {
+        right: 140px;
+        top: 105px;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      .metric {
+        border-radius: 20px;
+        padding: 24px;
+        background: #f1f5f9;
+      }
+
+      .metric strong {
+        display: block;
+        color: #0f172a;
+        font-size: 38px;
+        font-weight: 900;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 6px;
+        color: #475569;
+        font-size: 23px;
+        font-weight: 700;
+      }
+
+      .event {
+        border-top: 2px solid #e2e8f0;
+        padding-top: 18px;
+        margin-top: 18px;
+      }
+
+      .event-title {
+        margin: 0;
+        color: #0f172a;
+        font-size: 32px;
+        font-weight: 900;
+      }
+
+      .event-detail,
+      .event-time {
+        margin: 6px 0 0;
+        color: #334155;
+        font-size: 27px;
+        line-height: 1.3;
+      }
+
+      .event-time {
+        color: #64748b;
+        font-size: 23px;
+      }
+
+      .code {
+        border-radius: 20px;
+        padding: 24px;
+        background: #f1f5f9;
+        color: #334155;
+        font-family: "SF Mono", Menlo, monospace;
+        font-size: 21px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      .footer-note {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        bottom: 46px;
+        color: #475569;
+        font-size: 24px;
+        font-weight: 700;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shot">
+      <div class="topline">Monitriip Driver</div>
+      <h1 id="headline"></h1>
+      <p class="subhead" id="subhead"></p>
+      <section class="phone">
+        <div class="sensor"></div>
+        <div class="app" id="app"></div>
+      </section>
+      <div class="footer-note">App iOS nativo para evidências da viagem ativa e envio de GPS em segundo plano</div>
+    </main>
+
+    <script>
+      const screens = {
+        setup: {
+          headline: "Prepare uma viagem regular em minutos",
+          subhead: "Dados do motorista, veículo, linha e ordem de serviço ficam prontos antes do rastreamento.",
+          status: "rascunho",
+          body: `
+            <div class="panel">
+              <h2 class="panel-title">Preparação da viagem</h2>
+              <div class="field-grid">
+                <div><div class="label">CPF do motorista</div><div class="value">12345678901</div></div>
+                <div><div class="label">Placa do veículo</div><div class="value">BUS7A21</div></div>
+                <div><div class="label">Ordem de serviço</div><div class="value">OS-2026-0714</div></div>
+                <div><div class="label">Código da linha</div><div class="value">RJ-SP-430</div></div>
+                <div><div class="label">Origem</div><div class="value">RIO DE JANEIRO</div></div>
+                <div><div class="label">Destino</div><div class="value">SAO PAULO</div></div>
+              </div>
+            </div>
+            <div class="dark-panel">
+              <p class="route">RIO DE JANEIRO para SAO PAULO</p>
+              <p class="meta">Permissões: localização sempre autorizada</p>
+              <p class="meta">GPS na fila: 0 pontos</p>
+              <div class="actions"><span class="button primary">Iniciar viagem</span><span class="button">Sincronizar</span></div>
+            </div>`
+        },
+        tracking: {
+          headline: "GPS em segundo plano durante todo o trajeto",
+          subhead: "Amostras de posição continuam sendo registradas enquanto a viagem está ativa.",
+          status: "rastreando",
+          live: true,
+          body: `
+            <div class="dark-panel">
+              <p class="route">RIO DE JANEIRO para SAO PAULO</p>
+              <p class="meta">Viagem iniciada: 14 jul 2026, 08:35</p>
+              <p class="meta">GPS na fila: 248 pontos</p>
+              <div class="actions"><span class="button danger">Encerrar viagem</span><span class="button">Sincronizar</span></div>
+            </div>
+            <div class="panel">
+              <h2 class="panel-title">Evidência de rota em tempo real</h2>
+              <div class="map"><div class="route-line"></div><div class="pin a"></div><div class="pin b"></div></div>
+              <div class="metric-grid">
+                <div class="metric"><strong>15s</strong><span>Intervalo</span></div>
+                <div class="metric"><strong>50m</strong><span>Distância</span></div>
+                <div class="metric"><strong>Alta</strong><span>Precisão</span></div>
+              </div>
+            </div>`
+        },
+        boarding: {
+          headline: "Registre o embarque na porta do ônibus",
+          subhead: "Assento e documento ficam vinculados à viagem ativa para envio ou exportação.",
+          status: "rastreando",
+          live: true,
+          body: `
+            <div class="panel">
+              <h2 class="panel-title">Embarcar passageiro</h2>
+              <div class="field-grid">
+                <div><div class="label">Documento</div><div class="value">MG1234567</div></div>
+                <div><div class="label">Assento</div><div class="value">18</div></div>
+              </div>
+              <div class="actions"><span class="button primary">Registrar embarque</span></div>
+            </div>
+            <div class="panel">
+              <h2 class="panel-title">Evidências da viagem</h2>
+              <div class="event"><p class="event-title">Assento 18</p><p class="event-detail">Documento do passageiro MG1234567</p><p class="event-time">14 jul 2026, 09:18</p></div>
+              <div class="event"><p class="event-title">Assento 06</p><p class="event-detail">Documento do passageiro RJ9876543</p><p class="event-time">14 jul 2026, 08:58</p></div>
+            </div>`
+        },
+        occurrence: {
+          headline: "Registre ocorrências durante a operação",
+          subhead: "Fiscalizações, atrasos, desvios e atendimento a passageiros sem interromper o GPS.",
+          status: "rastreando",
+          live: true,
+          body: `
+            <div class="panel">
+              <h2 class="panel-title">Ocorrência</h2>
+              <div class="value" style="height: 190px;">Fiscalização rodoviária concluída no posto BR-116 KM 184. Viagem seguiu sem atraso.</div>
+              <div class="actions"><span class="button">Registrar ocorrência</span></div>
+            </div>
+            <div class="panel">
+              <h2 class="panel-title">Evidências da viagem</h2>
+              <div class="event"><p class="event-title">Ocorrência operacional</p><p class="event-detail">Fiscalização concluída no posto BR-116 KM 184.</p><p class="event-time">14 jul 2026, 11:42</p></div>
+              <div class="event"><p class="event-title">Assento 18</p><p class="event-detail">Documento do passageiro MG1234567</p><p class="event-time">14 jul 2026, 09:18</p></div>
+            </div>`
+        },
+        export: {
+          headline: "Sincronize online, exporte quando precisar",
+          subhead: "O aparelho mantém uma fila local para preservar evidências mesmo com sinal fraco.",
+          status: "finalizada",
+          body: `
+            <div class="dark-panel">
+              <p class="route">RIO DE JANEIRO para SAO PAULO</p>
+              <p class="meta">Última sincronização: 16:22 - enviados 248</p>
+              <p class="meta">GPS na fila: 0 pontos</p>
+              <div class="actions"><span class="button">Sincronizar</span></div>
+            </div>
+            <div class="panel">
+              <h2 class="panel-title">Pacote de exportação</h2>
+              <div class="code">{
+  "trip": "trip-20260714-rjsp",
+  "placaVeiculo": "BUS7A21",
+  "ordemServico": "OS-2026-0714",
+  "gpsPendente": 0,
+  "eventos": [
+    "embarque",
+    "ocorrencia"
+  ],
+  "status": "finalizada"
+}</div>
+            </div>`
+        }
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      const screen = screens[params.get("screen")] || screens.setup;
+      document.getElementById("headline").textContent = screen.headline;
+      document.getElementById("subhead").textContent = screen.subhead;
+      document.getElementById("app").innerHTML = `
+        <div class="app-header">
+          <div>
+            <div class="app-eyebrow">Operação ANTT Monitriip</div>
+            <div class="app-title">Console do Motorista</div>
+          </div>
+          <div class="pill ${screen.live ? "live" : ""}">${screen.status}</div>
+        </div>
+        ${screen.body}
+      `;
+    </script>
+  </body>
+</html>
