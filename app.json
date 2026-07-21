@@ -36,6 +36,7 @@
       ]
     ],
     "extra": {
+      "traccarEndpoint": "http://gps.fleetmap.pt:5055",
       "monitriipGpsEndpoint": ""
     }
   }

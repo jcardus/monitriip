@@ -1,9 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
@@ -22,7 +21,7 @@ const TRIP_KEY = "monitriip.activeTrip";
 const GPS_QUEUE_KEY = "monitriip.gpsQueue";
 const EVENT_QUEUE_KEY = "monitriip.eventQueue";
 const DEVICE_KEY = "monitriip.selectedDevice";
-const EMULATOR_INTERVAL_MS = 15000;
+const DEFAULT_TRACCAR_ENDPOINT = "http://gps.fleetmap.pt:5055";
 
 type ScreenshotScenario = "active" | "evidence";
 
@@ -46,9 +45,9 @@ type Trip = {
 type GpsSample = {
   id: string;
   tripId: string;
-  deviceId: string;
+  uniqueId: string;
   deviceLabel: string;
-  source: "native-location" | "device-emulator";
+  source: "phone-location";
   capturedAt: string;
   latitude: number;
   longitude: number;
@@ -61,7 +60,7 @@ type GpsSample = {
 type TrackingDevice = {
   id: string;
   label: string;
-  imei: string;
+  uniqueId: string;
   vehiclePlate: string;
 };
 
@@ -95,34 +94,21 @@ const trackingDevices: TrackingDevice[] = [
   {
     id: "mxt-001",
     label: "Rastreador MXT-001",
-    imei: "864507061234001",
+    uniqueId: "864507061234001",
     vehiclePlate: "BUS7A21"
   },
   {
     id: "mxt-002",
     label: "Rastreador MXT-002",
-    imei: "864507061234002",
+    uniqueId: "864507061234002",
     vehiclePlate: "BUS8B32"
   },
   {
     id: "mxt-003",
     label: "Rastreador MXT-003",
-    imei: "864507061234003",
+    uniqueId: "864507061234003",
     vehiclePlate: "BUS9C43"
   }
-];
-
-const emulatedRoute = [
-  { latitude: -22.9068, longitude: -43.1729 },
-  { latitude: -22.827, longitude: -43.053 },
-  { latitude: -22.745, longitude: -42.875 },
-  { latitude: -22.591, longitude: -42.452 },
-  { latitude: -22.507, longitude: -41.95 },
-  { latitude: -22.673, longitude: -41.324 },
-  { latitude: -22.875, longitude: -40.842 },
-  { latitude: -23.03, longitude: -40.255 },
-  { latitude: -23.245, longitude: -39.731 },
-  { latitude: -23.5505, longitude: -46.6333 }
 ];
 
 const screenshotTrip: Trip = {
@@ -161,9 +147,9 @@ const screenshotEvents: EventRecord[] = [
 const screenshotGpsQueue = Array.from({ length: 248 }, (_, index) => ({
   id: `gps-demo-${index}`,
   tripId: screenshotTrip.id,
-  deviceId: "mxt-001",
+  uniqueId: "864507061234001",
   deviceLabel: "Rastreador MXT-001",
-  source: "device-emulator" as const,
+  source: "phone-location" as const,
   capturedAt: new Date(Date.UTC(2026, 6, 21, 8, 35, index * 15)).toISOString(),
   latitude: -22.9068 + index * 0.001,
   longitude: -43.1729 + index * 0.001,
@@ -203,20 +189,7 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     : trackingDevices.find((device) => device.id === trip.trackingDeviceId) || trackingDevices[0];
 
   const { locations } = data as LocationTaskData;
-  const samples = locations.map<GpsSample>((location) => ({
-    id: `${trip.id}-${location.timestamp}`,
-    tripId: trip.id,
-    deviceId: selectedDevice.id,
-    deviceLabel: selectedDevice.label,
-    source: "native-location",
-    capturedAt: new Date(location.timestamp).toISOString(),
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-    accuracy: location.coords.accuracy,
-    speed: location.coords.speed,
-    heading: location.coords.heading,
-    altitude: location.coords.altitude
-  }));
+  const samples = locations.map<GpsSample>((location) => locationToGpsSample(trip, selectedDevice, location, "phone-location"));
 
   await appendGpsSamples(samples);
   await flushGpsQueue();
@@ -245,16 +218,59 @@ async function appendEvent(event: EventRecord) {
   await AsyncStorage.setItem(EVENT_QUEUE_KEY, JSON.stringify([event, ...queue]));
 }
 
-function getGpsEndpoint() {
-  return (
-    process.env.EXPO_PUBLIC_MONITRIIP_GPS_ENDPOINT ||
-    (Constants.expoConfig?.extra?.monitriipGpsEndpoint as string | undefined) ||
-    ""
-  );
+function locationToGpsSample(trip: Trip, device: TrackingDevice, location: Location.LocationObject, source: GpsSample["source"]): GpsSample {
+  return {
+    id: `${trip.id}-${location.timestamp}`,
+    tripId: trip.id,
+    uniqueId: device.uniqueId,
+    deviceLabel: device.label,
+    source,
+    capturedAt: new Date(location.timestamp).toISOString(),
+    latitude: location.coords.latitude,
+    longitude: location.coords.longitude,
+    accuracy: location.coords.accuracy,
+    speed: location.coords.speed,
+    heading: location.coords.heading,
+    altitude: location.coords.altitude
+  };
+}
+
+async function getGpsEndpoint() {
+  return DEFAULT_TRACCAR_ENDPOINT;
+}
+
+function buildTraccarUrl(endpoint: string, sample: GpsSample) {
+  const url = new URL(endpoint.endsWith("/") ? endpoint : `${endpoint}/`);
+  url.searchParams.set("id", sample.uniqueId);
+  url.searchParams.set("lat", String(sample.latitude));
+  url.searchParams.set("lon", String(sample.longitude));
+  url.searchParams.set("timestamp", sample.capturedAt);
+  url.searchParams.set("valid", "true");
+
+  if (sample.speed != null) {
+    url.searchParams.set("speed", String(sample.speed * 1.943844));
+  }
+
+  if (sample.heading != null) {
+    url.searchParams.set("bearing", String(sample.heading));
+  }
+
+  if (sample.altitude != null) {
+    url.searchParams.set("altitude", String(sample.altitude));
+  }
+
+  if (sample.accuracy != null) {
+    url.searchParams.set("accuracy", String(sample.accuracy));
+  }
+
+  url.searchParams.set("tripId", sample.tripId);
+  url.searchParams.set("deviceLabel", sample.deviceLabel);
+  url.searchParams.set("source", sample.source);
+  return url.toString();
 }
 
 async function flushGpsQueue() {
-  const endpoint = getGpsEndpoint();
+  const endpoint = await getGpsEndpoint();
 
   if (!endpoint) {
     return { sent: 0, pending: await readJson<GpsSample[]>(GPS_QUEUE_KEY, []) };
@@ -265,29 +281,38 @@ async function flushGpsQueue() {
     return { sent: 0, pending };
   }
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      source: "monitriip-driver",
-      sentAt: new Date().toISOString(),
-      samples: pending
-    })
-  });
+  let sentCount = 0;
 
-  if (!response.ok) {
-    throw new Error(`GPS upload failed with ${response.status}`);
+  for (const sample of pending) {
+    const response = await fetch(buildTraccarUrl(endpoint, sample), {
+      method: "GET"
+    });
+
+    if (!response.ok) {
+      const remaining = pending.slice(sentCount);
+      await AsyncStorage.setItem(GPS_QUEUE_KEY, JSON.stringify(remaining));
+      throw new Error(`Envio Traccar falhou com ${response.status}`);
+    }
+
+    sentCount += 1;
   }
 
   await AsyncStorage.setItem(GPS_QUEUE_KEY, JSON.stringify([]));
-  return { sent: pending.length, pending: [] };
+  return { sent: sentCount, pending: [] };
 }
 
 export default function App() {
   const screenshotScenario = getScreenshotScenario();
-  const [trip, setTrip] = useState<Trip>(screenshotScenario ? screenshotTrip : emptyTrip);
+  const [trip, setTrip] = useState<Trip>(
+    screenshotScenario
+      ? screenshotTrip
+      : {
+          ...emptyTrip,
+          vehiclePlate: trackingDevices[0].vehiclePlate,
+          trackingDeviceId: trackingDevices[0].id
+        }
+  );
+  const [selectedDevice, setSelectedDevice] = useState<TrackingDevice>(trackingDevices[0]);
   const [events, setEvents] = useState<EventRecord[]>(screenshotScenario ? screenshotEvents : []);
   const [gpsQueue, setGpsQueue] = useState<GpsSample[]>(screenshotScenario === "active" ? screenshotGpsQueue : []);
   const [permissionStatus, setPermissionStatus] = useState(screenshotScenario ? "autorizada em primeiro e segundo plano" : "Não verificada");
@@ -302,7 +327,7 @@ export default function App() {
 
   const routeLabel = useMemo(() => {
     if (!trip.origin && !trip.destination) {
-      return "No route set";
+      return "Rota não definida";
     }
 
     return `${trip.origin || "Origem"} para ${trip.destination || "Destino"}`;
@@ -322,6 +347,13 @@ export default function App() {
       const storedTrip = await readJson<Trip | null>(TRIP_KEY, null);
       if (storedTrip) {
         setTrip(storedTrip);
+      }
+
+      const storedDevice = await readJson<TrackingDevice | null>(DEVICE_KEY, null);
+      if (storedDevice) {
+        const migratedDevice = storedDevice.uniqueId ? storedDevice : trackingDevices.find((device) => device.id === storedDevice.id) || trackingDevices[0];
+        setSelectedDevice(migratedDevice);
+        await AsyncStorage.setItem(DEVICE_KEY, JSON.stringify(migratedDevice));
       }
 
       await refreshQueues();
@@ -345,6 +377,17 @@ export default function App() {
       [field]: value.toUpperCase()
     };
     persistTrip(nextTrip);
+  }
+
+  async function selectDevice(device: TrackingDevice) {
+    setSelectedDevice(device);
+    await AsyncStorage.setItem(DEVICE_KEY, JSON.stringify(device));
+    await persistTrip({
+      ...trip,
+      id: trip.id || createId("trip"),
+      vehiclePlate: device.vehiclePlate,
+      trackingDeviceId: device.id
+    });
   }
 
   async function requestLocationPermissions() {
@@ -373,8 +416,8 @@ export default function App() {
   }
 
   async function startTrip() {
-    if (!trip.driverCpf || !trip.vehiclePlate || !trip.serviceOrder || !trip.origin || !trip.destination) {
-      Alert.alert("Preparação incompleta", "CPF do motorista, placa, ordem de serviço, origem e destino são obrigatórios.");
+    if (!trip.driverCpf || !trip.serviceOrder || !trip.origin || !trip.destination || !selectedDevice?.uniqueId) {
+      Alert.alert("Preparação incompleta", "CPF do motorista, placa, ordem de serviço, origem, destino e rastreador são obrigatórios.");
       return;
     }
 
@@ -386,12 +429,23 @@ export default function App() {
     const nextTrip: Trip = {
       ...trip,
       id: trip.id || createId("trip"),
+      trackingDeviceId: selectedDevice.id,
+      vehiclePlate: selectedDevice.vehiclePlate,
       startedAt: new Date().toISOString(),
       endedAt: undefined,
       status: "active"
     };
 
+    await AsyncStorage.setItem(DEVICE_KEY, JSON.stringify(selectedDevice));
     await persistTrip(nextTrip);
+
+    const currentPosition = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High
+    });
+    await appendGpsSamples([locationToGpsSample(nextTrip, selectedDevice, currentPosition, "phone-location")]);
+    await flushGpsQueue();
+    await refreshQueues();
+
     await Location.startLocationUpdatesAsync(LOCATION_TASK, {
       accuracy: Location.Accuracy.High,
       timeInterval: 15000,
@@ -504,6 +558,23 @@ export default function App() {
           <Field label="Placa do veículo" value={trip.vehiclePlate} onChangeText={(value) => updateTrip("vehiclePlate", value)} />
           <Field label="Ordem de serviço" value={trip.serviceOrder} onChangeText={(value) => updateTrip("serviceOrder", value)} />
           <Field label="Código da linha" value={trip.routeCode} onChangeText={(value) => updateTrip("routeCode", value)} />
+          <View style={styles.deviceList}>
+            <Text style={styles.label}>RASTREADOR</Text>
+            {trackingDevices.map((device) => (
+              <Pressable
+                key={device.id}
+                accessibilityRole="button"
+                onPress={() => selectDevice(device)}
+                style={[styles.deviceOption, selectedDevice.id === device.id ? styles.deviceOptionSelected : null]}
+              >
+                <View>
+                  <Text style={styles.deviceName}>{device.label}</Text>
+                  <Text style={styles.deviceMeta}>Unique ID {device.uniqueId} · Placa {device.vehiclePlate}</Text>
+                </View>
+                <Text style={styles.deviceCheck}>{selectedDevice.id === device.id ? "Selecionado" : "Usar"}</Text>
+              </Pressable>
+            ))}
+          </View>
           <View style={styles.row}>
             <View style={styles.flex}>
               <Field label="Origem" value={trip.origin} onChangeText={(value) => updateTrip("origin", value)} />
@@ -580,9 +651,10 @@ type FieldProps = {
   value: string;
   onChangeText: (value: string) => void;
   keyboardType?: "default" | "number-pad";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
 };
 
-function Field({ label, value, onChangeText, keyboardType = "default" }: FieldProps) {
+function Field({ label, value, onChangeText, keyboardType = "default", autoCapitalize = "characters" }: FieldProps) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -591,7 +663,7 @@ function Field({ label, value, onChangeText, keyboardType = "default" }: FieldPr
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
-        autoCapitalize="characters"
+        autoCapitalize={autoCapitalize}
         placeholderTextColor="#64748b"
       />
     </View>
@@ -716,6 +788,39 @@ const styles = StyleSheet.create({
   },
   seatField: {
     width: 92
+  },
+  deviceList: {
+    gap: 8
+  },
+  deviceOption: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  deviceOptionSelected: {
+    borderColor: "#0f766e",
+    backgroundColor: "#ecfdf5"
+  },
+  deviceName: {
+    color: "#0f172a",
+    fontSize: 15,
+    fontWeight: "800"
+  },
+  deviceMeta: {
+    color: "#64748b",
+    fontSize: 12,
+    marginTop: 2
+  },
+  deviceCheck: {
+    color: "#0f766e",
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase"
   },
   summaryBand: {
     backgroundColor: "#0f172a",

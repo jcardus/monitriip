@@ -9,7 +9,7 @@ This is intentionally native, not a PWA, because the app records GPS while a tri
 - Driver, vehicle, route, service order, and trip setup.
 - Start/end trip workflow with background GPS tracking.
 - Local queue for GPS samples while connectivity is unavailable.
-- Foreground flush to a configurable backend endpoint.
+- Foreground and background send to Traccar's OsmAnd endpoint on port `5055`.
 - Passenger boarding and operational occurrence records.
 - JSON export for inspection or backend handoff.
 
@@ -23,7 +23,17 @@ The app config enables:
 - Android background location and foreground service permissions
 - Expo Location config plugin for native permission strings
 
-Configure the backend GPS ingestion endpoint with `EXPO_PUBLIC_MONITRIIP_GPS_ENDPOINT` or `expo.extra.monitriipGpsEndpoint`.
+GPS positions are sent to the hardcoded Traccar OsmAnd endpoint:
+
+```text
+http://gps.fleetmap.pt:5055
+```
+
+The request uses the selected tracker's `uniqueId` as Traccar's `id` query parameter:
+
+```text
+/?id=<uniqueId>&lat=<latitude>&lon=<longitude>&timestamp=<iso-time>&speed=<knots>&bearing=<degrees>&altitude=<meters>&accuracy=<meters>
+```
 
 ## Run
 
