@@ -495,17 +495,25 @@ function formatVehicleUpdate(value?: string) {
     return "Sem comunicação recente";
   }
 
-  const elapsedSeconds = Math.round((new Date(value).getTime() - Date.now()) / 1000);
-  const relative = new Intl.RelativeTimeFormat("pt", { numeric: "auto" });
-  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
-    ["day", 86_400],
-    ["hour", 3_600],
-    ["minute", 60]
+  const updatedAt = new Date(value).getTime();
+  if (!Number.isFinite(updatedAt)) {
+    return "Atualização desconhecida";
+  }
+
+  const elapsedSeconds = Math.round((updatedAt - Date.now()) / 1000);
+  const units: Array<[singular: string, plural: string, seconds: number]> = [
+    ["dia", "dias", 86_400],
+    ["hora", "horas", 3_600],
+    ["minuto", "minutos", 60]
   ];
 
-  for (const [unit, seconds] of units) {
+  for (const [singular, plural, seconds] of units) {
     if (Math.abs(elapsedSeconds) >= seconds) {
-      return relative.format(Math.round(elapsedSeconds / seconds), unit);
+      const amount = Math.abs(Math.round(elapsedSeconds / seconds));
+      const label = amount === 1 ? singular : plural;
+      return elapsedSeconds < 0
+        ? `há ${amount} ${label}`
+        : `dentro de ${amount} ${label}`;
     }
   }
 
