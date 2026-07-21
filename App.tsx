@@ -184,9 +184,14 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   }
 
   const deviceRaw = await AsyncStorage.getItem(DEVICE_KEY);
-  const selectedDevice = deviceRaw
-    ? (JSON.parse(deviceRaw) as TrackingDevice)
-    : trackingDevices.find((device) => device.id === trip.trackingDeviceId) || trackingDevices[0];
+  const storedDevice = deviceRaw ? (JSON.parse(deviceRaw) as TrackingDevice) : null;
+  const selectedDevice = storedDevice?.uniqueId
+    ? storedDevice
+    : trackingDevices.find((device) => device.id === (storedDevice?.id || trip.trackingDeviceId)) || trackingDevices[0];
+
+  if (!storedDevice?.uniqueId) {
+    await AsyncStorage.setItem(DEVICE_KEY, JSON.stringify(selectedDevice));
+  }
 
   const { locations } = data as LocationTaskData;
   const samples = locations.map<GpsSample>((location) => locationToGpsSample(trip, selectedDevice, location, "phone-location"));
@@ -443,7 +448,11 @@ export default function App() {
       accuracy: Location.Accuracy.High
     });
     await appendGpsSamples([locationToGpsSample(nextTrip, selectedDevice, currentPosition, "phone-location")]);
-    await flushGpsQueue();
+    try {
+      await flushGpsQueue();
+    } catch (error) {
+      setLastSync(`${new Date().toLocaleTimeString()} - envio inicial pendente`);
+    }
     await refreshQueues();
 
     await Location.startLocationUpdatesAsync(LOCATION_TASK, {
