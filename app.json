@@ -5,12 +5,16 @@
     "scheme": "monitriipdriver",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.monitriip.driver",
       "infoPlist": {
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -33,7 +37,17 @@
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }
-      ]
-    ]
+      ],
+      "expo-status-bar",
+      "expo-router"
+    ],
+    "extra": {
+      "traccarEndpoint": "http://gps.fleetmap.pt:5055",
+      "monitriipGpsEndpoint": "",
+      "eas": {
+        "projectId": "c47748e4-310b-4996-9b54-a79ee0c0f5d9"
+      }
+    },
+    "owner": "jcardeira"
   }
 }
