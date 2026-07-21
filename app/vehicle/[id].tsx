@@ -12,6 +12,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { startVehicleLocationTracking, stopVehicleLocationTracking } from "../../gps-tracking";
 import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
 
 export default function VehicleTripScreen() {
@@ -59,6 +60,14 @@ export default function VehicleTripScreen() {
       setSubmitting(true);
       setError("");
       const result = await toggleVehicleTrip(vehicle, tripLicense);
+      setVehicle(result.updatedVehicle);
+
+      if (endingTrip) {
+        await stopVehicleLocationTracking();
+      } else {
+        await startVehicleLocationTracking(result.updatedVehicle, tripLicense);
+      }
+
       Alert.alert(
         endingTrip ? "Viagem terminada" : "Viagem iniciada",
         result.message || `${vehicle.attributes?.license_plate || vehicle.name} foi atualizado com sucesso.`,

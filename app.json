@@ -42,8 +42,6 @@
       "expo-router"
     ],
     "extra": {
-      "traccarEndpoint": "http://gps.fleetmap.pt:5055",
-      "monitriipGpsEndpoint": "",
       "eas": {
         "projectId": "c47748e4-310b-4996-9b54-a79ee0c0f5d9"
       }

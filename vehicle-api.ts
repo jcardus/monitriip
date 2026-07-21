@@ -9,6 +9,7 @@ const MONITRIIP_TRIP_URL =
 export type Vehicle = {
   id: number;
   name: string;
+  uniqueId?: string;
   status?: string;
   lastUpdate?: string;
   positionId?: number;
