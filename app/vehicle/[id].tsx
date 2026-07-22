@@ -3,7 +3,6 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -12,7 +11,7 @@ import {
   TextInput,
   View
 } from "react-native";
-import { startVehicleLocationTracking, stopVehicleLocationTracking } from "../../gps-tracking";
+import { startVehicleLocationTracking } from "../../gps-tracking";
 import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
 
 export default function VehicleTripScreen() {
@@ -34,6 +33,10 @@ export default function VehicleTripScreen() {
       if (!selected) {
         throw new Error("Este veículo não está mais disponível.");
       }
+      if (selected.attributes?.monitrip) {
+        router.replace({ pathname: "/trip/[id]", params: { id: String(selected.id) } });
+        return;
+      }
       setVehicle(selected);
       setTripLicense(String(selected.attributes?.notes ?? ""));
     } catch (loadError) {
@@ -41,7 +44,7 @@ export default function VehicleTripScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     loadVehicle();
@@ -50,29 +53,18 @@ export default function VehicleTripScreen() {
   async function updateTrip() {
     if (!vehicle) return;
 
-    if (!vehicle.attributes?.monitrip && !tripLicense.trim()) {
+    if (!tripLicense.trim()) {
       setError("Por favor, informe a licença de viagem.");
       return;
     }
 
-    const endingTrip = Boolean(vehicle.attributes?.monitrip);
     try {
       setSubmitting(true);
       setError("");
       const result = await toggleVehicleTrip(vehicle, tripLicense);
       setVehicle(result.updatedVehicle);
-
-      if (endingTrip) {
-        await stopVehicleLocationTracking();
-      } else {
-        await startVehicleLocationTracking(result.updatedVehicle, tripLicense);
-      }
-
-      Alert.alert(
-        endingTrip ? "Viagem terminada" : "Viagem iniciada",
-        result.message || `${vehicle.attributes?.license_plate || vehicle.name} foi atualizado com sucesso.`,
-        [{ text: "OK", onPress: () => router.back() }]
-      );
+      await startVehicleLocationTracking(result.updatedVehicle, tripLicense);
+      router.replace({ pathname: "/trip/[id]", params: { id: String(vehicle.id) } });
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Não foi possível atualizar a viagem.");
     } finally {
@@ -82,33 +74,14 @@ export default function VehicleTripScreen() {
 
   function confirmTripUpdate() {
     if (!vehicle || submitting) return;
-    const endingTrip = Boolean(vehicle.attributes?.monitrip);
-
-    if (!endingTrip) {
-      setTripLicense("");
-      setError("");
-      setLicenseModalVisible(true);
-      return;
-    }
-
-    Alert.alert(
-      "Terminar viagem?",
-      "Deseja terminar a viagem?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Terminar",
-          style: "destructive",
-          onPress: updateTrip
-        }
-      ]
-    );
+    setTripLicense("");
+    setError("");
+    setLicenseModalVisible(true);
   }
 
   const plate = vehicle?.attributes?.license_plate;
   const ignition = Boolean(vehicle?.position?.attributes?.ignition);
   const online = vehicle?.status === "online";
-  const tripActive = Boolean(vehicle?.attributes?.monitrip);
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -141,7 +114,7 @@ export default function VehicleTripScreen() {
           <View style={styles.actionCard}>
             <Text style={styles.sectionTitle}>Gerenciamento da viagem</Text>
             <Text style={styles.description}>
-              {tripActive ? `Viagem em andamento${tripLicense ? ` · Licença ${tripLicense}` : ""}.` : "Toque no botão para iniciar uma nova viagem."}
+              Toque no botão para iniciar uma nova viagem.
             </Text>
 
             <Pressable
@@ -150,17 +123,15 @@ export default function VehicleTripScreen() {
               onPress={confirmTripUpdate}
               style={({ pressed }) => [
                 styles.button,
-                tripActive ? styles.finishButton : styles.startButton,
+                styles.startButton,
                 pressed && !submitting ? styles.pressed : null,
                 submitting ? styles.disabled : null
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color={tripActive ? "#b42318" : "#ffffff"} />
+                <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={tripActive ? styles.finishButtonText : styles.startButtonText}>
-                  {tripActive ? "Terminar viagem" : "Iniciar viagem"}
-                </Text>
+                <Text style={styles.startButtonText}>Iniciar viagem</Text>
               )}
             </Pressable>
           </View>
@@ -269,8 +240,6 @@ const styles = StyleSheet.create({
   button: { minHeight: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   startButton: { backgroundColor: "#0f766e" },
   startButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "900" },
-  finishButton: { borderWidth: 1.5, borderColor: "#d92d20", backgroundColor: "#fff7f6" },
-  finishButtonText: { color: "#b42318", fontSize: 16, fontWeight: "900" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.55 },
   error: { color: "#9f2721", backgroundColor: "#fff1f0", borderRadius: 14, padding: 14, fontSize: 14, lineHeight: 20 },

@@ -16,6 +16,14 @@ export default function RootLayout() {
         name="vehicle/[id]"
         options={{ title: "Veículo", headerBackButtonDisplayMode: "minimal" }}
       />
+      <Stack.Screen
+        name="trip/[id]"
+        options={{
+          title: "Viagem em andamento",
+          headerBackVisible: false,
+          gestureEnabled: false
+        }}
+      />
     </Stack>
   );
 }

@@ -23,6 +23,9 @@ export type Vehicle = {
     [key: string]: unknown;
   };
   position?: {
+    address?: string;
+    latitude?: number;
+    longitude?: number;
     attributes?: {
       ignition?: boolean;
       [key: string]: unknown;
