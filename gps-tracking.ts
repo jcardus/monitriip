@@ -7,7 +7,7 @@ import type { Vehicle } from "./vehicle-api";
 const LOCATION_TASK = "monitriip-background-location";
 const TRIP_KEY = "monitriip.activeTrip";
 const GPS_QUEUE_KEY = "monitriip.gpsQueue";
-const DEFAULT_TRACCAR_ENDPOINT = "http://gps.fleetmap.pt:5055";
+const DEFAULT_OSMAND_ENDPOINT = "https://osmand.joaquim.workers.dev";
 
 type TrackingTrip = {
   id: string;
@@ -97,7 +97,7 @@ function locationToGpsSample(trip: TrackingTrip, location: Location.LocationObje
 }
 
 export function buildTraccarUrl(sample: GpsSample) {
-  const url = new URL(`${DEFAULT_TRACCAR_ENDPOINT}/`);
+  const url = new URL(`${DEFAULT_OSMAND_ENDPOINT}/`);
   url.searchParams.set("id", sample.uniqueId);
   url.searchParams.set("lat", String(sample.latitude));
   url.searchParams.set("lon", String(sample.longitude));

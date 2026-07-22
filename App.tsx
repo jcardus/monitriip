@@ -383,9 +383,14 @@ function DriverConsole({ email, onLogout }: DriverConsoleProps) {
                 <Text style={styles.vehicleTitle}>Selecione um veículo</Text>
                 <Text selectable style={styles.vehicleUser}>{email}</Text>
               </View>
-              <Pressable accessibilityRole="button" onPress={onLogout} style={styles.logoutButton}>
-                <Text style={styles.logoutText}>Sair</Text>
-              </Pressable>
+              <View style={styles.vehicleHeaderActions}>
+                <Pressable accessibilityRole="button" onPress={() => router.push("/about")} style={styles.aboutButton}>
+                  <Text style={styles.aboutButtonText}>Sobre</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={onLogout} style={styles.logoutButton}>
+                  <Text style={styles.logoutText}>Sair</Text>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.searchBox}>
@@ -603,6 +608,26 @@ const styles = StyleSheet.create({
   vehicleHeading: {
     flex: 1,
     gap: 2
+  },
+  vehicleHeaderActions: {
+    alignItems: "flex-end",
+    gap: 8
+  },
+  aboutButton: {
+    minHeight: 34,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderCurve: "continuous",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e1efed",
+    borderWidth: 1,
+    borderColor: "#bdd8d4"
+  },
+  aboutButtonText: {
+    color: "#0f766e",
+    fontSize: 13,
+    fontWeight: "800"
   },
   vehicleEyebrow: {
     color: "#0f766e",

@@ -9,7 +9,7 @@ This is intentionally native, not a PWA, because the app records GPS while a tri
 - Driver, vehicle, route, service order, and trip setup.
 - Start/end trip workflow with background GPS tracking.
 - Local queue for GPS samples while connectivity is unavailable.
-- Foreground and background send to Traccar's OsmAnd endpoint on port `5055`.
+- Foreground and background send to the Traccar OsmAnd HTTPS endpoint.
 - Passenger boarding and operational occurrence records.
 - JSON export for inspection or backend handoff.
 
@@ -26,7 +26,7 @@ The app config enables:
 GPS positions are sent to the hardcoded Traccar OsmAnd endpoint:
 
 ```text
-http://gps.fleetmap.pt:5055
+https://osmand.joaquim.workers.dev
 ```
 
 The request uses the selected tracker's `uniqueId` as Traccar's `id` query parameter:

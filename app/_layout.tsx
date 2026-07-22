@@ -13,6 +13,10 @@ export default function RootLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
+        name="about"
+        options={{ title: "Sobre", headerBackButtonDisplayMode: "minimal" }}
+      />
+      <Stack.Screen
         name="vehicle/[id]"
         options={{ title: "Veículo", headerBackButtonDisplayMode: "minimal" }}
       />

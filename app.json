@@ -14,15 +14,7 @@
         "UIBackgroundModes": [
           "location"
         ],
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": {
-          "NSExceptionDomains": {
-            "gps.fleetmap.pt": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSIncludesSubdomains": false
-            }
-          }
-        }
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
