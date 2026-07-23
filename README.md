@@ -54,6 +54,8 @@ Use a real device for background GPS validation. Simulators are useful for UI ch
 
 The app is configured for EAS Update with the `appVersion` runtime policy. Production builds listen on the `production` update channel, and internal preview builds listen on the `preview` channel.
 
+Pushing to `main` triggers `.eas/workflows/update-production.yml`, which publishes a production OTA update for JavaScript and asset changes.
+
 Publish JavaScript and asset-only changes without a new store build:
 
 ```sh
@@ -64,7 +66,7 @@ Use a new iOS/Android build whenever native code, permissions, plugins, Expo SDK
 
 ## Store upload automation
 
-Pushing to `main` triggers `.eas/workflows/build-and-submit.yml`. The workflow queues EAS production builds for iOS and Android, then submits successful builds to App Store Connect/TestFlight and Google Play.
+Run `.eas/workflows/build-and-submit.yml` manually when native changes require new iOS and Android binaries. The workflow queues EAS production builds for iOS and Android, then submits successful builds to App Store Connect/TestFlight and Google Play.
 
 iOS submission uses the App Store Connect app id configured in `eas.json`. Apple credentials/API key must already be configured in EAS for non-interactive submissions.
 
