@@ -12,19 +12,29 @@ import {
   View
 } from "react-native";
 import { startVehicleLocationTracking } from "../../gps-tracking";
+import { isScreenshotMode, screenshotVehicles } from "../../screenshot-data";
 import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
 
 export default function VehicleTripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [loading, setLoading] = useState(true);
+  const screenshotMode = isScreenshotMode();
+  const screenshotVehicle = screenshotVehicles.find((item) => String(item.id) === String(id)) || screenshotVehicles[0];
+  const [vehicle, setVehicle] = useState<Vehicle | null>(screenshotMode ? screenshotVehicle : null);
+  const [loading, setLoading] = useState(!screenshotMode);
   const [submitting, setSubmitting] = useState(false);
   const [licenseModalVisible, setLicenseModalVisible] = useState(false);
   const [tripLicense, setTripLicense] = useState("");
   const [error, setError] = useState("");
 
   const loadVehicle = useCallback(async () => {
+    if (screenshotMode) {
+      setVehicle(screenshotVehicle);
+      setTripLicense(String(screenshotVehicle.attributes?.notes ?? ""));
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -44,7 +54,7 @@ export default function VehicleTripScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id, router, screenshotMode, screenshotVehicle]);
 
   useEffect(() => {
     loadVehicle();
@@ -52,6 +62,7 @@ export default function VehicleTripScreen() {
 
   async function updateTrip() {
     if (!vehicle) return;
+    if (screenshotMode) return;
 
     if (!tripLicense.trim()) {
       setError("Por favor, informe a licença de viagem.");

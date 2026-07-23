@@ -11,16 +11,19 @@ Capturas finais:
 
 O App Store Connect pode redimensionar essas imagens para iPhones menores quando você não enviar capturas específicas para cada classe de dispositivo.
 
-Arquivo fonte:
+Arquivos fonte:
 
 - `generate-upload-screenshots.js`
+- `generate-real-app-screenshots.js`
+
+As capturas são renderizadas a partir dos componentes reais do app com dados de demonstração ativados por `screenshot=1`.
 
 Arquivos para upload:
 
-- `upload/iphone-01-viagem-ativa.png`
-- `upload/iphone-02-evidencias.png`
-- `upload/ipad-01-viagem-ativa.png`
-- `upload/ipad-02-evidencias.png`
+- `upload/iphone-01-veiculos.png`
+- `upload/iphone-02-viagem-ativa.png`
+- `upload/ipad-01-veiculos.png`
+- `upload/ipad-02-viagem-ativa.png`
 
 Para regerar:
 

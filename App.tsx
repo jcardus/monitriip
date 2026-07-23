@@ -25,6 +25,7 @@ import {
   requestPasswordReset,
   restoreSession
 } from "./auth";
+import { isScreenshotMode, screenshotEmail, screenshotVehicles } from "./screenshot-data";
 import { getVehicles, type Vehicle } from "./vehicle-api";
 
 function createId(prefix: string) {
@@ -32,14 +33,19 @@ function createId(prefix: string) {
 }
 
 export default function App() {
+  const screenshotMode = isScreenshotMode();
   const [authenticatedUser, setAuthenticatedUser] = useState<string | null>(null);
-  const [restoringSession, setRestoringSession] = useState(true);
+  const [restoringSession, setRestoringSession] = useState(!screenshotMode);
 
   useEffect(() => {
+    if (screenshotMode) {
+      return;
+    }
+
     restoreSession()
       .then(setAuthenticatedUser)
       .finally(() => setRestoringSession(false));
-  }, []);
+  }, [screenshotMode]);
 
   async function logout() {
     try {
@@ -57,6 +63,10 @@ export default function App() {
         <Text style={styles.sessionLoaderText}>A carregar sessão…</Text>
       </View>
     );
+  }
+
+  if (screenshotMode) {
+    return <DriverConsole email={screenshotEmail} onLogout={logout} screenshotMode />;
   }
 
   if (!authenticatedUser) {
@@ -319,16 +329,24 @@ function LoginField({ label, value, onChangeText, placeholder, keyboardType = "d
 type DriverConsoleProps = {
   email: string;
   onLogout: () => void;
+  screenshotMode?: boolean;
 };
 
-function DriverConsole({ email, onLogout }: DriverConsoleProps) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsoleProps) {
+  const [vehicles, setVehicles] = useState<Vehicle[]>(screenshotMode ? screenshotVehicles : []);
   const [filter, setFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!screenshotMode);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const loadVehicles = useCallback(async (refresh = false) => {
+    if (screenshotMode) {
+      setVehicles(screenshotVehicles);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
       refresh ? setRefreshing(true) : setLoading(true);
       setError("");
@@ -339,7 +357,7 @@ function DriverConsole({ email, onLogout }: DriverConsoleProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [screenshotMode]);
 
   useEffect(() => {
     loadVehicles();
@@ -361,8 +379,78 @@ function DriverConsole({ email, onLogout }: DriverConsoleProps) {
   function selectVehicle(vehicle: Vehicle) {
     router.push({
       pathname: vehicle.attributes?.monitrip ? "/trip/[id]" : "/vehicle/[id]",
-      params: { id: String(vehicle.id) }
+      params: { id: String(vehicle.id), ...(screenshotMode ? { screenshot: "1" } : {}) }
     });
+  }
+
+  const vehicleHeader = (
+    <View style={styles.vehicleHeaderBlock}>
+      <View style={styles.vehicleTopBar}>
+        <View style={styles.vehicleHeading}>
+          <Text style={styles.vehicleEyebrow}>Monitriip Motorista</Text>
+          <Text style={styles.vehicleTitle}>Selecione um veículo</Text>
+          <Text selectable style={styles.vehicleUser}>{email}</Text>
+        </View>
+        <View style={styles.vehicleHeaderActions}>
+          <Pressable accessibilityRole="button" onPress={() => router.push("/about")} style={styles.aboutButton}>
+            <Text style={styles.aboutButtonText}>Sobre</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onLogout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Sair</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.searchBox}>
+        <Text style={styles.searchIcon}>⌕</Text>
+        <TextInput
+          accessibilityLabel="Pesquisar veículos"
+          value={filter}
+          onChangeText={setFilter}
+          placeholder="Pesquisar por nome ou placa"
+          placeholderTextColor="#7b8b90"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          returnKeyType="search"
+          style={styles.searchInput}
+        />
+        {filter ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Limpar pesquisa" onPress={() => setFilter("")} style={styles.clearSearch}>
+            <Text style={styles.clearSearchText}>×</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {!loading && !error ? (
+        <View style={styles.vehicleCountRow}>
+          <Text style={styles.vehicleCount}>{visibleVehicles.length} {visibleVehicles.length === 1 ? "veículo" : "veículos"}</Text>
+          <Text style={styles.refreshHint}>Puxe para atualizar</Text>
+        </View>
+      ) : null}
+
+      {error ? (
+        <View style={styles.vehicleErrorCard}>
+          <Text selectable style={styles.vehicleErrorText}>{error}</Text>
+          <Pressable accessibilityRole="button" onPress={() => loadVehicles()} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Tentar novamente</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  if (screenshotMode) {
+    return (
+      <View style={styles.vehicleScreen}>
+        <StatusBar style="dark" />
+        <ScrollView contentContainerStyle={styles.vehicleListContent}>
+          {vehicleHeader}
+          {visibleVehicles.map((item) => (
+            <VehicleRow key={item.id} vehicle={item} onPress={() => selectVehicle(item)} />
+          ))}
+        </ScrollView>
+      </View>
+    );
   }
 
   return (
@@ -375,61 +463,7 @@ function DriverConsole({ email, onLogout }: DriverConsoleProps) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.vehicleListContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadVehicles(true)} tintColor="#0f766e" />}
-        ListHeaderComponent={
-          <View style={styles.vehicleHeaderBlock}>
-            <View style={styles.vehicleTopBar}>
-              <View style={styles.vehicleHeading}>
-                <Text style={styles.vehicleEyebrow}>Monitriip Motorista</Text>
-                <Text style={styles.vehicleTitle}>Selecione um veículo</Text>
-                <Text selectable style={styles.vehicleUser}>{email}</Text>
-              </View>
-              <View style={styles.vehicleHeaderActions}>
-                <Pressable accessibilityRole="button" onPress={() => router.push("/about")} style={styles.aboutButton}>
-                  <Text style={styles.aboutButtonText}>Sobre</Text>
-                </Pressable>
-                <Pressable accessibilityRole="button" onPress={onLogout} style={styles.logoutButton}>
-                  <Text style={styles.logoutText}>Sair</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>⌕</Text>
-              <TextInput
-                accessibilityLabel="Pesquisar veículos"
-                value={filter}
-                onChangeText={setFilter}
-                placeholder="Pesquisar por nome ou placa"
-                placeholderTextColor="#7b8b90"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                returnKeyType="search"
-                style={styles.searchInput}
-              />
-              {filter ? (
-                <Pressable accessibilityRole="button" accessibilityLabel="Limpar pesquisa" onPress={() => setFilter("")} style={styles.clearSearch}>
-                  <Text style={styles.clearSearchText}>×</Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            {!loading && !error ? (
-              <View style={styles.vehicleCountRow}>
-                <Text style={styles.vehicleCount}>{visibleVehicles.length} {visibleVehicles.length === 1 ? "veículo" : "veículos"}</Text>
-                <Text style={styles.refreshHint}>Puxe para atualizar</Text>
-              </View>
-            ) : null}
-
-            {error ? (
-              <View style={styles.vehicleErrorCard}>
-                <Text selectable style={styles.vehicleErrorText}>{error}</Text>
-                <Pressable accessibilityRole="button" onPress={() => loadVehicles()} style={styles.retryButton}>
-                  <Text style={styles.retryButtonText}>Tentar novamente</Text>
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
-        }
+        ListHeaderComponent={vehicleHeader}
         renderItem={({ item }) => (
           <VehicleRow
             vehicle={item}

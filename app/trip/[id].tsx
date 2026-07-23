@@ -11,17 +11,26 @@ import {
   View
 } from "react-native";
 import { stopVehicleLocationTracking } from "../../gps-tracking";
+import { isScreenshotMode, screenshotVehicles } from "../../screenshot-data";
 import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
 
 export default function ActiveTripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [loading, setLoading] = useState(true);
+  const screenshotMode = isScreenshotMode();
+  const screenshotVehicle = screenshotVehicles.find((item) => String(item.id) === String(id)) || screenshotVehicles[0];
+  const [vehicle, setVehicle] = useState<Vehicle | null>(screenshotMode ? screenshotVehicle : null);
+  const [loading, setLoading] = useState(!screenshotMode);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const loadVehicle = useCallback(async () => {
+    if (screenshotMode) {
+      setVehicle(screenshotVehicle);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -40,7 +49,7 @@ export default function ActiveTripScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id, router, screenshotMode, screenshotVehicle]);
 
   useEffect(() => {
     loadVehicle();
@@ -48,6 +57,7 @@ export default function ActiveTripScreen() {
 
   async function endTrip() {
     if (!vehicle || submitting) return;
+    if (screenshotMode) return;
 
     try {
       setSubmitting(true);
