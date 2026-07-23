@@ -1,9 +1,6 @@
 name: Upload Native Builds To Stores
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:

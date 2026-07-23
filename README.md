@@ -64,11 +64,12 @@ Use a new iOS/Android build whenever native code, permissions, plugins, Expo SDK
 
 ## Store upload automation
 
-Pushing to `main` triggers `.github/workflows/store-upload.yml`. The workflow queues EAS production builds for iOS and Android and uses `--auto-submit` so successful builds are uploaded to App Store Connect/TestFlight and Google Play.
+Pushing to `main` triggers `.eas/workflows/build-and-submit.yml`. The workflow queues EAS production builds for iOS and Android, then submits successful builds to App Store Connect/TestFlight and Google Play.
 
-Required GitHub repository secrets:
+Required EAS environment variables:
 
-- `EXPO_TOKEN`: Expo access token for EAS Build and Submit.
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: Google Play service account JSON for Android submission.
 
 iOS submission uses the App Store Connect app id configured in `eas.json`. Apple credentials/API key must already be configured in EAS for non-interactive submissions.
+
+`.github/workflows/store-upload.yml` is kept as a manual fallback and can be run from GitHub Actions with the same `EXPO_TOKEN` and `GOOGLE_SERVICE_ACCOUNT_JSON` repository secrets.
