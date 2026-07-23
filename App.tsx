@@ -352,7 +352,9 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
     () => [
       styles.vehicleListContent,
       {
-        paddingTop: Math.max(styles.vehicleListContent.paddingTop, insets.top + 12)
+        paddingTop: Platform.OS === "android"
+          ? Math.max(styles.vehicleListContent.paddingTop, insets.top + 12)
+          : styles.vehicleListContent.paddingTop
       }
     ],
     [insets.top]
