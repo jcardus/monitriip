@@ -25,6 +25,8 @@ jobs:
     name: Submit iOS
     needs: [build_ios]
     type: submit
+    env:
+      EXPO_DEBUG: "1"
     params:
       build_id: ${{ needs.build_ios.outputs.build_id }}
       profile: production
@@ -33,12 +35,8 @@ jobs:
     name: Submit Android
     needs: [build_android]
     type: submit
+    env:
+      EXPO_DEBUG: "1"
     params:
       build_id: ${{ needs.build_android.outputs.build_id }}
       profile: production
-    hooks:
-      before_submit:
-        - name: Write Google Play service account
-          run: |
-            test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
-            printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > google-service-account.json

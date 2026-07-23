@@ -66,8 +66,6 @@ Use a new iOS/Android build whenever native code, permissions, plugins, Expo SDK
 
 Pushing to `main` triggers `.eas/workflows/build-and-submit.yml`. The workflow queues EAS production builds for iOS and Android, then submits successful builds to App Store Connect/TestFlight and Google Play.
 
-Required EAS environment variables:
-
-- `GOOGLE_SERVICE_ACCOUNT_JSON`: Google Play service account JSON for Android submission.
-
 iOS submission uses the App Store Connect app id configured in `eas.json`. Apple credentials/API key must already be configured in EAS for non-interactive submissions.
+
+Android submission uses the Google Play service account key already configured in EAS Android Service Credentials.
