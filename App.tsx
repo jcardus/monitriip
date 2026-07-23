@@ -25,6 +25,7 @@ import {
   requestPasswordReset,
   restoreSession
 } from "./auth";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { isScreenshotMode, screenshotEmail, screenshotVehicles } from "./screenshot-data";
 import { getVehicles, type Vehicle } from "./vehicle-api";
 
@@ -33,6 +34,14 @@ function createId(prefix: string) {
 }
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+}
+
+function AppContent() {
   const screenshotMode = isScreenshotMode();
   const [authenticatedUser, setAuthenticatedUser] = useState<string | null>(null);
   const [restoringSession, setRestoringSession] = useState(!screenshotMode);
@@ -333,11 +342,21 @@ type DriverConsoleProps = {
 };
 
 function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsoleProps) {
+  const insets = useSafeAreaInsets();
   const [vehicles, setVehicles] = useState<Vehicle[]>(screenshotMode ? screenshotVehicles : []);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(!screenshotMode);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const vehicleListContentStyle = useMemo(
+    () => [
+      styles.vehicleListContent,
+      {
+        paddingTop: Math.max(styles.vehicleListContent.paddingTop, insets.top + 12)
+      }
+    ],
+    [insets.top]
+  );
 
   const loadVehicles = useCallback(async (refresh = false) => {
     if (screenshotMode) {
@@ -443,7 +462,7 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
     return (
       <View style={styles.vehicleScreen}>
         <StatusBar style="dark" />
-        <ScrollView contentContainerStyle={styles.vehicleListContent}>
+        <ScrollView contentContainerStyle={vehicleListContentStyle}>
           {vehicleHeader}
           {visibleVehicles.map((item) => (
             <VehicleRow key={item.id} vehicle={item} onPress={() => selectVehicle(item)} />
@@ -461,7 +480,7 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
         data={visibleVehicles}
         keyExtractor={(vehicle) => String(vehicle.id)}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.vehicleListContent}
+        contentContainerStyle={vehicleListContentStyle}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadVehicles(true)} tintColor="#0f766e" />}
         ListHeaderComponent={vehicleHeader}
         renderItem={({ item }) => (

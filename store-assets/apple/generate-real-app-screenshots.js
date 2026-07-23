@@ -64,6 +64,15 @@ function installTranspiler(screen) {
       return { StatusBar: () => null };
     }
 
+    if (request === "react-native-safe-area-context") {
+      const React = originalLoad.call(this, "react", parent, isMain);
+      return {
+        SafeAreaProvider: ({ children }) => React.createElement(React.Fragment, null, children),
+        SafeAreaView: ({ children }) => React.createElement(React.Fragment, null, children),
+        useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 })
+      };
+    }
+
     if (request.endsWith("/auth") || request === "./auth" || request === "../../auth") {
       return {
         authenticate: async () => "screenshot@monitriip.local",
