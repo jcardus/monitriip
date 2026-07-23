@@ -71,5 +71,3 @@ Required EAS environment variables:
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: Google Play service account JSON for Android submission.
 
 iOS submission uses the App Store Connect app id configured in `eas.json`. Apple credentials/API key must already be configured in EAS for non-interactive submissions.
-
-`.github/workflows/store-upload.yml` is kept as a manual fallback and can be run from GitHub Actions with the same `EXPO_TOKEN` and `GOOGLE_SERVICE_ACCOUNT_JSON` repository secrets.
