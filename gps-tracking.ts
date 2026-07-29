@@ -149,7 +149,7 @@ export async function flushGpsQueue() {
   return { sent: sentCount, pending: [] };
 }
 
-async function requestLocationPermissions() {
+export async function requestTripLocationPermissions() {
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (foreground.status !== "granted") {
     throw new Error("Permissão de localização em primeiro plano negada.");
@@ -174,8 +174,6 @@ export async function startVehicleLocationTracking(vehicle: Vehicle, tripLicense
   if (!uniqueId) {
     throw new Error("Este veículo não possui uniqueId para envio ao Traccar.");
   }
-
-  await requestLocationPermissions();
 
   const trip: TrackingTrip = {
     id: createTripId(vehicle),

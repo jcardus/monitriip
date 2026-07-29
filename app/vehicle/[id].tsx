@@ -11,7 +11,10 @@ import {
   TextInput,
   View
 } from "react-native";
-import { startVehicleLocationTracking } from "../../gps-tracking";
+import {
+  requestTripLocationPermissions,
+  startVehicleLocationTracking
+} from "../../gps-tracking";
 import { isScreenshotMode, screenshotVehicles } from "../../screenshot-data";
 import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
 
@@ -24,6 +27,7 @@ export default function VehicleTripScreen() {
   const [loading, setLoading] = useState(!screenshotMode);
   const [submitting, setSubmitting] = useState(false);
   const [licenseModalVisible, setLicenseModalVisible] = useState(false);
+  const [locationDisclosureVisible, setLocationDisclosureVisible] = useState(false);
   const [tripLicense, setTripLicense] = useState("");
   const [error, setError] = useState("");
 
@@ -72,6 +76,7 @@ export default function VehicleTripScreen() {
     try {
       setSubmitting(true);
       setError("");
+      await requestTripLocationPermissions();
       const result = await toggleVehicleTrip(vehicle, tripLicense);
       setVehicle(result.updatedVehicle);
       await startVehicleLocationTracking(result.updatedVehicle, tripLicense);
@@ -88,6 +93,16 @@ export default function VehicleTripScreen() {
     setTripLicense("");
     setError("");
     setLicenseModalVisible(true);
+  }
+
+  function continueToLocationDisclosure() {
+    if (!tripLicense.trim()) {
+      setError("Por favor, informe a licença de viagem.");
+      return;
+    }
+
+    setLicenseModalVisible(false);
+    setLocationDisclosureVisible(true);
   }
 
   const plate = vehicle?.attributes?.license_plate;
@@ -172,12 +187,7 @@ export default function VehicleTripScreen() {
                     autoCapitalize="characters"
                     autoCorrect={false}
                     returnKeyType="done"
-                    onSubmitEditing={() => {
-                      if (tripLicense.trim()) {
-                        setLicenseModalVisible(false);
-                        updateTrip();
-                      }
-                    }}
+                    onSubmitEditing={continueToLocationDisclosure}
                     style={styles.input}
                   />
                 </View>
@@ -189,13 +199,63 @@ export default function VehicleTripScreen() {
                   <Pressable
                     accessibilityRole="button"
                     disabled={!tripLicense.trim() || submitting}
-                    onPress={() => {
-                      setLicenseModalVisible(false);
-                      updateTrip();
-                    }}
+                    onPress={continueToLocationDisclosure}
                     style={[styles.modalConfirm, !tripLicense.trim() || submitting ? styles.disabled : null]}
                   >
-                    <Text style={styles.modalConfirmText}>Iniciar</Text>
+                    <Text style={styles.modalConfirmText}>Continuar</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            animationType="fade"
+            transparent
+            visible={locationDisclosureVisible}
+            onRequestClose={() => setLocationDisclosureVisible(false)}
+          >
+            <View style={styles.modalBackdrop}>
+              <View
+                accessibilityViewIsModal
+                accessibilityLabel="Divulgação sobre localização em segundo plano"
+                style={styles.modalCard}
+              >
+                <Text accessibilityRole="header" style={styles.modalTitle}>
+                  Localização durante a viagem
+                </Text>
+                <Text style={styles.disclosureText}>
+                  O Monitriip Driver coleta sua localização precisa para registrar
+                  e enviar o percurso da viagem ativa à empresa responsável pela
+                  frota, mesmo quando o app está em segundo plano ou não está em uso.
+                </Text>
+                <Text style={styles.disclosureText}>
+                  A coleta começa quando você inicia a viagem e termina quando
+                  toca em “Terminar viagem”. A localização é usada pela empresa
+                  para acompanhar a operação e comprovar o percurso. Ela não é
+                  usada para anúncios.
+                </Text>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    accessibilityLabel="Não permitir localização em segundo plano"
+                    accessibilityRole="button"
+                    disabled={submitting}
+                    onPress={() => setLocationDisclosureVisible(false)}
+                    style={styles.modalCancel}
+                  >
+                    <Text style={styles.modalCancelText}>Agora não</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Permitir localização e iniciar viagem"
+                    accessibilityRole="button"
+                    disabled={submitting}
+                    onPress={() => {
+                      setLocationDisclosureVisible(false);
+                      updateTrip();
+                    }}
+                    style={[styles.modalConfirm, submitting ? styles.disabled : null]}
+                  >
+                    <Text style={styles.modalConfirmText}>Permitir e iniciar</Text>
                   </Pressable>
                 </View>
               </View>
@@ -242,6 +302,7 @@ const styles = StyleSheet.create({
   modalCard: { gap: 15, borderRadius: 24, padding: 22, backgroundColor: "#ffffff" },
   modalTitle: { color: "#102a2e", fontSize: 22, fontWeight: "900" },
   modalDescription: { color: "#667a7e", fontSize: 14, lineHeight: 20 },
+  disclosureText: { color: "#36575c", fontSize: 15, lineHeight: 23 },
   modalError: { color: "#b42318", fontSize: 13, fontWeight: "700" },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, paddingTop: 3 },
   modalCancel: { minHeight: 46, justifyContent: "center", paddingHorizontal: 16 },
