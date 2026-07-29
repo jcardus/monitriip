@@ -11,6 +11,7 @@ Requirements checked against Google Play guidance:
 
 - `512 x 512`
 - PNG
+- Exact resized copy of `../../assets/icon.png`, which is embedded in the app
 - Full square artwork
 - Under `1024 KB`
 - No pre-rounded corners or external drop shadow
