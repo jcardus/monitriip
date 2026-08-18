@@ -1,5 +1,6 @@
 {
   "expo": {
+    "owner": "jcardeira",
     "name": "Monitriip Driver",
     "slug": "monitriip-driver",
     "scheme": "monitriipdriver",
