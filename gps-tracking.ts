@@ -106,7 +106,8 @@ export function buildTraccarUrl(sample: GpsSample) {
   url.searchParams.set("driverUniqueId", sample.driverUniqueId);
   url.searchParams.set("lat", String(sample.latitude));
   url.searchParams.set("lon", String(sample.longitude));
-  url.searchParams.set("timestamp", sample.capturedAt);
+  // Traccar's OsmAnd protocol decoder expects Unix seconds, not an ISO 8601 string.
+  url.searchParams.set("timestamp", String(Math.floor(new Date(sample.capturedAt).getTime() / 1000)));
   url.searchParams.set("valid", "true");
 
   if (sample.speed != null) {
