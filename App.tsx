@@ -518,6 +518,7 @@ type VehicleRowProps = {
 function VehicleRow({ vehicle, onPress }: VehicleRowProps) {
   const online = vehicle.status === "online";
   const ignition = Boolean(vehicle.position?.attributes?.ignition);
+  const onTrip = Boolean(vehicle.attributes?.monitrip);
   const plate = vehicle.attributes?.license_plate;
   const address = vehicle.position?.address?.trim();
 
@@ -541,6 +542,11 @@ function VehicleRow({ vehicle, onPress }: VehicleRowProps) {
             <View style={styles.onlineBadge}>
               <View style={styles.onlineDot} />
               <Text style={styles.onlineText}>Online</Text>
+            </View>
+          ) : null}
+          {onTrip ? (
+            <View style={styles.tripBadge}>
+              <Text style={styles.tripText}>Em viagem</Text>
             </View>
           ) : null}
         </View>
@@ -804,6 +810,7 @@ const styles = StyleSheet.create({
   },
   vehicleNameRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8
   },
@@ -830,6 +837,18 @@ const styles = StyleSheet.create({
   },
   onlineText: {
     color: "#166534",
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  tripBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    backgroundColor: "#ccfbf1"
+  },
+  tripText: {
+    color: "#0f766e",
     fontSize: 10,
     fontWeight: "900",
     textTransform: "uppercase"
