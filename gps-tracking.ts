@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getCurrentUser } from "aws-amplify/auth";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { Alert, Linking } from "react-native";
@@ -15,6 +16,7 @@ type TrackingTrip = {
   vehicleName: string;
   vehiclePlate: string;
   uniqueId: string;
+  driverUniqueId: string;
   tripLicense: string;
   startedAt: string;
   endedAt?: string;
@@ -25,6 +27,7 @@ type GpsSample = {
   id: string;
   tripId: string;
   uniqueId: string;
+  driverUniqueId: string;
   deviceLabel: string;
   source: "phone-location";
   capturedAt: string;
@@ -84,6 +87,7 @@ function locationToGpsSample(trip: TrackingTrip, location: Location.LocationObje
     id: `${trip.id}-${location.timestamp}`,
     tripId: trip.id,
     uniqueId: trip.uniqueId,
+    driverUniqueId: trip.driverUniqueId,
     deviceLabel: trip.vehicleName,
     source: "phone-location",
     capturedAt: new Date(location.timestamp).toISOString(),
@@ -99,6 +103,7 @@ function locationToGpsSample(trip: TrackingTrip, location: Location.LocationObje
 export function buildTraccarUrl(sample: GpsSample) {
   const url = new URL(`${DEFAULT_OSMAND_ENDPOINT}/`);
   url.searchParams.set("id", sample.uniqueId);
+  url.searchParams.set("driverUniqueId", sample.driverUniqueId);
   url.searchParams.set("lat", String(sample.latitude));
   url.searchParams.set("lon", String(sample.longitude));
   url.searchParams.set("timestamp", sample.capturedAt);
@@ -175,12 +180,19 @@ export async function startVehicleLocationTracking(vehicle: Vehicle, tripLicense
     throw new Error("Este veículo não possui uniqueId para envio ao Traccar.");
   }
 
+  const { username } = await getCurrentUser();
+  const driverUniqueId = username?.trim();
+  if (!driverUniqueId) {
+    throw new Error("Não foi possível identificar o motorista para envio ao Traccar.");
+  }
+
   const trip: TrackingTrip = {
     id: createTripId(vehicle),
     vehicleId: vehicle.id,
     vehicleName: vehicle.name,
     vehiclePlate: vehicle.attributes?.license_plate || "",
     uniqueId,
+    driverUniqueId,
     tripLicense: tripLicense.trim(),
     startedAt: new Date().toISOString(),
     status: "active"
