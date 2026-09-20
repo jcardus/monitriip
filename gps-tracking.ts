@@ -109,6 +109,10 @@ export function buildTraccarUrl(sample: GpsSample) {
   // Traccar's OsmAnd protocol decoder expects Unix seconds, not an ISO 8601 string.
   url.searchParams.set("timestamp", String(Math.floor(new Date(sample.capturedAt).getTime() / 1000)));
   url.searchParams.set("valid", "true");
+  // Every sample here is only ever generated while a trip is active, so the vehicle
+  // is by definition in use for the duration - report ignition as on. Traccar's OsmAnd
+  // decoder uses Boolean.parseBoolean, which only recognizes the literal string "true".
+  url.searchParams.set("ignition", "true");
 
   if (sample.speed != null) {
     url.searchParams.set("speed", String(sample.speed * 1.943844));
