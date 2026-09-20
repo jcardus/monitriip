@@ -74,7 +74,7 @@ function UpdateInfo() {
       <View style={styles.separator} />
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>Publicado em</Text>
-        <Text selectable style={styles.infoValue}>
+        <Text selectable style={styles.infoValueSmall}>
           {Updates.createdAt ? Updates.createdAt.toLocaleString("pt-BR") : "—"}
         </Text>
       </View>
