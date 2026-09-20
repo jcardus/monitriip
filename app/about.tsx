@@ -1,7 +1,9 @@
 import Constants from "expo-constants";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as Updates from "expo-updates";
 
 function getNativeBuildVersion() {
   if (process.env.EXPO_OS === "ios") {
@@ -13,6 +15,83 @@ function getNativeBuildVersion() {
   }
 
   return null;
+}
+
+// The native "Build" number above never changes when an OTA update is applied - it's
+// baked into the binary. This is the only on-device way to tell whether the JS bundle
+// currently running came from an EAS Update or is still the one embedded at build time.
+function UpdateInfo() {
+  const [checking, setChecking] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const checkNow = async () => {
+    if (!Updates.isEnabled) {
+      setMessage("Atualizações OTA desabilitadas neste build.");
+      return;
+    }
+    setChecking(true);
+    setMessage(null);
+    try {
+      const result = await Updates.checkForUpdateAsync();
+      if (!result.isAvailable) {
+        setMessage("Nenhuma atualização nova disponível.");
+        return;
+      }
+      await Updates.fetchUpdateAsync();
+      Alert.alert(
+        "Atualização baixada",
+        "Reiniciar o app agora para aplicar?",
+        [
+          { text: "Depois", style: "cancel" },
+          { text: "Reiniciar", onPress: () => Updates.reloadAsync() }
+        ]
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Erro ao verificar atualização.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <View style={styles.infoCard}>
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>Origem do JS</Text>
+        <Text selectable style={styles.infoValue}>
+          {Updates.isEmbeddedLaunch ? "Embutido no build" : "Atualização OTA"}
+        </Text>
+      </View>
+      <View style={styles.separator} />
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>Update ID</Text>
+        <Text selectable style={styles.infoValueSmall}>{Updates.updateId ?? "—"}</Text>
+      </View>
+      <View style={styles.separator} />
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>Canal</Text>
+        <Text selectable style={styles.infoValue}>{Updates.channel ?? "—"}</Text>
+      </View>
+      <View style={styles.separator} />
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>Publicado em</Text>
+        <Text selectable style={styles.infoValue}>
+          {Updates.createdAt ? Updates.createdAt.toLocaleString("pt-BR") : "—"}
+        </Text>
+      </View>
+      <View style={styles.separator} />
+      <Pressable
+        accessibilityRole="button"
+        disabled={checking}
+        onPress={checkNow}
+        style={[styles.checkButton, checking ? styles.disabled : null]}
+      >
+        <Text style={styles.checkButtonText}>
+          {checking ? "Verificando..." : "Verificar atualização agora"}
+        </Text>
+      </Pressable>
+      {message ? <Text style={styles.updateMessage}>{message}</Text> : null}
+    </View>
+  );
 }
 
 export default function AboutScreen() {
@@ -53,6 +132,8 @@ export default function AboutScreen() {
           </>
         ) : null}
       </View>
+
+      <UpdateInfo />
 
       <Text selectable style={styles.versionLine}>
         {build ? `Versão ${version} (${build})` : `Versão ${version}`}
@@ -133,6 +214,33 @@ const styles = StyleSheet.create({
   separator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#dce6e4"
+  },
+  infoValueSmall: {
+    flexShrink: 1,
+    color: "#102a2e",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right"
+  },
+  checkButton: {
+    minHeight: 46,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 8
+  },
+  disabled: {
+    opacity: 0.5
+  },
+  checkButtonText: {
+    color: "#0f766e",
+    fontSize: 15,
+    fontWeight: "800"
+  },
+  updateMessage: {
+    color: "#667a7e",
+    fontSize: 13,
+    textAlign: "center",
+    paddingBottom: 12
   },
   versionLine: {
     color: "#819195",
