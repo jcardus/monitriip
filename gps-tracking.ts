@@ -106,11 +106,10 @@ export function buildTraccarUrl(sample: GpsSample) {
   url.searchParams.set("driverUniqueId", sample.driverUniqueId);
   url.searchParams.set("lat", String(sample.latitude));
   url.searchParams.set("lon", String(sample.longitude));
-  // Traccar's own OsmAnd decoder auto-detects seconds vs. milliseconds, but the
-  // osmand.joaquim.workers.dev bridge in front of it does its own timestamp parsing
-  // (standard JS `new Date(ms)`) and needs milliseconds - confirmed by testing directly
-  // against the deployed bridge, seconds silently produce a near-epoch (1970) timestamp.
-  url.searchParams.set("timestamp", String(new Date(sample.capturedAt).getTime()));
+  // Traccar's OsmAnd decoder auto-scales any value under Integer.MAX_VALUE by 1000,
+  // so plain Unix seconds and milliseconds both decode to the same instant - confirmed
+  // against the actual deployed Traccar source and live position data.
+  url.searchParams.set("timestamp", String(Math.floor(new Date(sample.capturedAt).getTime() / 1000)));
   url.searchParams.set("valid", "true");
   // Every sample here is only ever generated while a trip is active, so the vehicle
   // is by definition in use for the duration - report ignition as on. Traccar's OsmAnd
