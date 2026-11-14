@@ -101,30 +101,58 @@ async function getSessionCookie(accessToken: string) {
   return (await sessionResponse.json()) as string;
 }
 
-export async function getDriverCpfInfo(deviceId: number): Promise<DriverCpfInfo> {
-  const accessToken = await getAccessToken();
-  const sessionCookie = await getSessionCookie(accessToken);
-  const response = await fetch(`${MONITRIIP_CPF_URL}/${deviceId}`, {
+async function getLoggedInDriver(accessToken: string) {
+  const response = await fetch(`${DRIVER_API_URL}/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-      Cookie: sessionCookie
-    },
-    credentials: "include"
+      Accept: "application/json"
+    }
   });
 
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error("A sessão expirou. Entre novamente.");
     }
-    throw new Error(`Não foi possível verificar o CPF do motorista (${response.status}).`);
+    throw new Error(`Não foi possível carregar o motorista (${response.status}).`);
   }
 
-  const data = (await response.json()) as Partial<DriverCpfInfo>;
+  const data = (await response.json()) as {
+    name?: string | null;
+    cpfMotorista?: string;
+  };
   return {
-    requiresDriverCpf: Boolean(data.requiresDriverCpf),
-    cpfMotorista: cleanCpf(data.cpfMotorista),
-    driverName: data.driverName || null
+    driverName: data.name || null,
+    cpfMotorista: cleanCpf(data.cpfMotorista)
+  };
+}
+
+export async function getDriverCpfInfo(deviceId: number): Promise<DriverCpfInfo> {
+  const accessToken = await getAccessToken();
+  const sessionCookie = await getSessionCookie(accessToken);
+  const [requiredResponse, loggedInDriver] = await Promise.all([
+    fetch(`${MONITRIIP_CPF_URL}/${deviceId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+        Cookie: sessionCookie
+      },
+      credentials: "include"
+    }),
+    getLoggedInDriver(accessToken)
+  ]);
+
+  if (!requiredResponse.ok) {
+    if (requiredResponse.status === 401) {
+      throw new Error("A sessão expirou. Entre novamente.");
+    }
+    throw new Error(`Não foi possível verificar o CPF do motorista (${requiredResponse.status}).`);
+  }
+
+  const requiredData = (await requiredResponse.json()) as { requiresDriverCpf?: boolean };
+  return {
+    requiresDriverCpf: Boolean(requiredData.requiresDriverCpf),
+    cpfMotorista: loggedInDriver.cpfMotorista,
+    driverName: loggedInDriver.driverName
   };
 }
 

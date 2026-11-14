@@ -209,7 +209,7 @@ export default function VehicleTripScreen() {
                 </Text>
                 <Text style={styles.cpfHint}>
                   {detectedCpf
-                    ? "Detectado pela leitura RFID. Você pode alterar ao iniciar."
+                    ? "CPF da sua conta. Você pode alterar ao iniciar."
                     : "Informe o CPF manualmente ao iniciar a viagem."}
                 </Text>
               </View>
@@ -285,7 +285,7 @@ export default function VehicleTripScreen() {
                       style={styles.input}
                     />
                     {cpfInfo?.driverName && detectedCpf && cleanCpf(cpfMotorista) === cleanCpf(detectedCpf) ? (
-                      <Text style={styles.fieldHint}>Usando CPF de {cpfInfo.driverName}</Text>
+                      <Text style={styles.fieldHint}>Usando CPF da conta de {cpfInfo.driverName}</Text>
                     ) : null}
                   </View>
                 ) : null}
