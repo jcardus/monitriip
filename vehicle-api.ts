@@ -1,10 +1,14 @@
 import { fetch } from "expo/fetch";
 import { fetchAuthSession } from "aws-amplify/auth";
+import { cleanCpf } from "./cpf";
 
 const DRIVER_API_URL = process.env.EXPO_PUBLIC_DRIVER_API_URL ?? "https://fieldmap.net/driver";
 const MONITRIIP_TRIP_URL =
   process.env.EXPO_PUBLIC_MONITRIIP_TRIP_URL ??
   "https://api.pinme.io/pinmeapi/integration/moniitrip/startTrip";
+const MONITRIIP_CPF_URL =
+  process.env.EXPO_PUBLIC_MONITRIIP_CPF_URL ??
+  "https://api.pinme.io/pinmeapi/integration/moniitrip/requiresDriverCpf";
 
 export type Vehicle = {
   id: number;
@@ -71,8 +75,13 @@ export async function getVehicles(signal?: AbortSignal) {
   return (data as Vehicle[]).sort((a, b) => a.name.trim().localeCompare(b.name.trim(), "pt"));
 }
 
-export async function toggleVehicleTrip(vehicle: Vehicle, tripLicense: string) {
-  const accessToken = await getAccessToken();
+export type DriverCpfInfo = {
+  requiresDriverCpf: boolean;
+  cpfMotorista: string;
+  driverName: string | null;
+};
+
+async function getSessionCookie(accessToken: string) {
   const sessionResponse = await fetch(`${DRIVER_API_URL}/session`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -89,7 +98,43 @@ export async function toggleVehicleTrip(vehicle: Vehicle, tripLicense: string) {
     );
   }
 
-  const sessionCookie = (await sessionResponse.json()) as string;
+  return (await sessionResponse.json()) as string;
+}
+
+export async function getDriverCpfInfo(deviceId: number): Promise<DriverCpfInfo> {
+  const accessToken = await getAccessToken();
+  const sessionCookie = await getSessionCookie(accessToken);
+  const response = await fetch(`${MONITRIIP_CPF_URL}/${deviceId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+      Cookie: sessionCookie
+    },
+    credentials: "include"
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("A sessão expirou. Entre novamente.");
+    }
+    throw new Error(`Não foi possível verificar o CPF do motorista (${response.status}).`);
+  }
+
+  const data = (await response.json()) as Partial<DriverCpfInfo>;
+  return {
+    requiresDriverCpf: Boolean(data.requiresDriverCpf),
+    cpfMotorista: cleanCpf(data.cpfMotorista),
+    driverName: data.driverName || null
+  };
+}
+
+export async function toggleVehicleTrip(
+  vehicle: Vehicle,
+  tripLicense: string,
+  cpfMotorista?: string
+) {
+  const accessToken = await getAccessToken();
+  const sessionCookie = await getSessionCookie(accessToken);
   const updatedVehicle: Vehicle = {
     ...vehicle,
     attributes: {
@@ -98,6 +143,7 @@ export async function toggleVehicleTrip(vehicle: Vehicle, tripLicense: string) {
       notes: tripLicense.trim()
     }
   };
+  const cpf = cleanCpf(cpfMotorista);
   const response = await fetch(MONITRIIP_TRIP_URL, {
     method: "POST",
     headers: {
@@ -107,7 +153,7 @@ export async function toggleVehicleTrip(vehicle: Vehicle, tripLicense: string) {
       Cookie: sessionCookie
     },
     credentials: "include",
-    body: JSON.stringify(updatedVehicle)
+    body: JSON.stringify(cpf ? { ...updatedVehicle, cpfMotorista: cpf } : updatedVehicle)
   });
 
   if (!response.ok) {

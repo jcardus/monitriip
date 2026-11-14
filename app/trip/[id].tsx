@@ -10,9 +10,15 @@ import {
   Text,
   View
 } from "react-native";
-import { stopVehicleLocationTracking } from "../../gps-tracking";
+import { formatCpf } from "../../cpf";
+import { getActiveTrip, stopVehicleLocationTracking } from "../../gps-tracking";
 import { isScreenshotMode, screenshotVehicles } from "../../screenshot-data";
-import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
+import {
+  getDriverCpfInfo,
+  getVehicles,
+  toggleVehicleTrip,
+  type Vehicle
+} from "../../vehicle-api";
 
 export default function ActiveTripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,6 +28,7 @@ export default function ActiveTripScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(screenshotMode ? screenshotVehicle : null);
   const [loading, setLoading] = useState(!screenshotMode);
   const [submitting, setSubmitting] = useState(false);
+  const [cpfMotorista, setCpfMotorista] = useState("");
   const [error, setError] = useState("");
 
   const loadVehicle = useCallback(async () => {
@@ -44,6 +51,18 @@ export default function ActiveTripScreen() {
         return;
       }
       setVehicle(selected);
+
+      const activeTrip = await getActiveTrip();
+      if (activeTrip?.cpfMotorista) {
+        setCpfMotorista(activeTrip.cpfMotorista);
+      } else {
+        try {
+          const info = await getDriverCpfInfo(selected.id);
+          setCpfMotorista(info.cpfMotorista || "");
+        } catch (cpfError) {
+          console.warn(cpfError);
+        }
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Não foi possível carregar a viagem.");
     } finally {
@@ -63,7 +82,7 @@ export default function ActiveTripScreen() {
       setSubmitting(true);
       setError("");
       const license = String(vehicle.attributes?.notes ?? "");
-      const result = await toggleVehicleTrip(vehicle, license);
+      const result = await toggleVehicleTrip(vehicle, license, cpfMotorista || undefined);
       await stopVehicleLocationTracking();
       Alert.alert(
         "Viagem terminada",
@@ -86,6 +105,7 @@ export default function ActiveTripScreen() {
 
   const plate = vehicle?.attributes?.license_plate;
   const license = String(vehicle?.attributes?.notes ?? "").trim();
+  const cpfDisplay = cpfMotorista ? formatCpf(cpfMotorista) : "";
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -109,6 +129,12 @@ export default function ActiveTripScreen() {
             <View style={styles.licenseBox}>
               <Text style={styles.licenseLabel}>Licença de viagem</Text>
               <Text selectable style={styles.licenseValue}>{license}</Text>
+            </View>
+          ) : null}
+          {cpfDisplay ? (
+            <View style={styles.licenseBox}>
+              <Text style={styles.licenseLabel}>CPF do motorista</Text>
+              <Text selectable style={styles.licenseValue}>{cpfDisplay}</Text>
             </View>
           ) : null}
 

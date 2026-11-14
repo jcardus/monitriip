@@ -11,12 +11,19 @@ import {
   TextInput,
   View
 } from "react-native";
+import { cleanCpf, formatCpf, formatCpfInput, isValidCpf } from "../../cpf";
 import {
   requestTripLocationPermissions,
   startVehicleLocationTracking
 } from "../../gps-tracking";
 import { isScreenshotMode, screenshotVehicles } from "../../screenshot-data";
-import { getVehicles, toggleVehicleTrip, type Vehicle } from "../../vehicle-api";
+import {
+  getDriverCpfInfo,
+  getVehicles,
+  toggleVehicleTrip,
+  type DriverCpfInfo,
+  type Vehicle
+} from "../../vehicle-api";
 
 export default function VehicleTripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,7 +36,12 @@ export default function VehicleTripScreen() {
   const [licenseModalVisible, setLicenseModalVisible] = useState(false);
   const [locationDisclosureVisible, setLocationDisclosureVisible] = useState(false);
   const [tripLicense, setTripLicense] = useState("");
+  const [cpfInfo, setCpfInfo] = useState<DriverCpfInfo | null>(
+    screenshotMode ? { requiresDriverCpf: true, cpfMotorista: "", driverName: null } : null
+  );
+  const [cpfMotorista, setCpfMotorista] = useState("");
   const [error, setError] = useState("");
+  const [modalError, setModalError] = useState("");
 
   const loadVehicle = useCallback(async () => {
     if (screenshotMode) {
@@ -53,6 +65,16 @@ export default function VehicleTripScreen() {
       }
       setVehicle(selected);
       setTripLicense(String(selected.attributes?.notes ?? ""));
+
+      try {
+        const info = await getDriverCpfInfo(selected.id);
+        setCpfInfo(info);
+        setCpfMotorista(info.cpfMotorista ? formatCpf(info.cpfMotorista) : "");
+      } catch (cpfError) {
+        console.warn(cpfError);
+        setCpfInfo({ requiresDriverCpf: true, cpfMotorista: "", driverName: null });
+        setCpfMotorista("");
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Não foi possível carregar o veículo.");
     } finally {
@@ -73,13 +95,25 @@ export default function VehicleTripScreen() {
       return;
     }
 
+    const cpf = cleanCpf(cpfMotorista);
+    if (cpfInfo?.requiresDriverCpf) {
+      if (!cpf) {
+        setError("Informe o CPF do motorista para iniciar a viagem.");
+        return;
+      }
+      if (!isValidCpf(cpf)) {
+        setError("CPF do motorista inválido.");
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
       setError("");
       await requestTripLocationPermissions();
-      const result = await toggleVehicleTrip(vehicle, tripLicense);
+      const result = await toggleVehicleTrip(vehicle, tripLicense, cpf || undefined);
       setVehicle(result.updatedVehicle);
-      await startVehicleLocationTracking(result.updatedVehicle, tripLicense);
+      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, cpf || undefined);
       router.replace({ pathname: "/trip/[id]", params: { id: String(vehicle.id) } });
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Não foi possível atualizar a viagem.");
@@ -91,16 +125,34 @@ export default function VehicleTripScreen() {
   function confirmTripUpdate() {
     if (!vehicle || submitting) return;
     setTripLicense("");
+    setCpfMotorista(cpfInfo?.cpfMotorista ? formatCpf(cpfInfo.cpfMotorista) : "");
     setError("");
+    setModalError("");
     setLicenseModalVisible(true);
   }
 
   function continueToLocationDisclosure() {
     if (!tripLicense.trim()) {
-      setError("Por favor, informe a licença de viagem.");
+      setModalError("Por favor, informe a licença de viagem.");
       return;
     }
 
+    const cpf = cleanCpf(cpfMotorista);
+    if (cpfInfo?.requiresDriverCpf) {
+      if (!cpf) {
+        setModalError("Informe o CPF do motorista.");
+        return;
+      }
+      if (!isValidCpf(cpf)) {
+        setModalError("CPF do motorista inválido.");
+        return;
+      }
+    } else if (cpf && !isValidCpf(cpf)) {
+      setModalError("CPF do motorista inválido.");
+      return;
+    }
+
+    setModalError("");
     setLicenseModalVisible(false);
     setLocationDisclosureVisible(true);
   }
@@ -108,6 +160,9 @@ export default function VehicleTripScreen() {
   const plate = vehicle?.attributes?.license_plate;
   const ignition = Boolean(vehicle?.position?.attributes?.ignition);
   const online = vehicle?.status === "online";
+  const showCpf = Boolean(cpfInfo?.requiresDriverCpf || cpfInfo?.cpfMotorista);
+  const detectedCpf = cpfInfo?.cpfMotorista ? formatCpf(cpfInfo.cpfMotorista) : null;
+  const cpfReady = Boolean(cleanCpf(cpfMotorista) && isValidCpf(cpfMotorista));
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
@@ -142,6 +197,23 @@ export default function VehicleTripScreen() {
             <Text style={styles.description}>
               Toque no botão para iniciar uma nova viagem.
             </Text>
+
+            {showCpf ? (
+              <View style={styles.cpfCard}>
+                <Text style={styles.cpfLabel}>CPF do motorista</Text>
+                {cpfInfo?.driverName ? (
+                  <Text style={styles.cpfDriver}>{cpfInfo.driverName}</Text>
+                ) : null}
+                <Text selectable style={styles.cpfValue}>
+                  {detectedCpf || "Não identificado"}
+                </Text>
+                <Text style={styles.cpfHint}>
+                  {detectedCpf
+                    ? "Detectado pela leitura RFID. Você pode alterar ao iniciar."
+                    : "Informe o CPF manualmente ao iniciar a viagem."}
+                </Text>
+              </View>
+            ) : null}
 
             <Pressable
               accessibilityRole="button"
@@ -180,27 +252,64 @@ export default function VehicleTripScreen() {
                     value={tripLicense}
                     onChangeText={(value) => {
                       setTripLicense(value);
-                      setError("");
+                      setModalError("");
                     }}
                     placeholder="Digite a licença"
                     placeholderTextColor="#7b8b90"
                     autoCapitalize="characters"
                     autoCorrect={false}
-                    returnKeyType="done"
-                    onSubmitEditing={continueToLocationDisclosure}
+                    returnKeyType={showCpf ? "next" : "done"}
+                    onSubmitEditing={showCpf ? undefined : continueToLocationDisclosure}
                     style={styles.input}
                   />
                 </View>
-                {!tripLicense.trim() && error ? <Text style={styles.modalError}>{error}</Text> : null}
+                {showCpf ? (
+                  <View style={styles.field}>
+                    <Text style={styles.label}>
+                      CPF do motorista{cpfInfo?.requiresDriverCpf ? " *" : ""}
+                    </Text>
+                    <TextInput
+                      accessibilityLabel="CPF do motorista"
+                      value={cpfMotorista}
+                      onChangeText={(value) => {
+                        setCpfMotorista(formatCpfInput(value));
+                        setModalError("");
+                      }}
+                      placeholder="000.000.000-00"
+                      placeholderTextColor="#7b8b90"
+                      keyboardType="number-pad"
+                      autoCorrect={false}
+                      maxLength={14}
+                      returnKeyType="done"
+                      onSubmitEditing={continueToLocationDisclosure}
+                      style={styles.input}
+                    />
+                    {cpfInfo?.driverName && detectedCpf && cleanCpf(cpfMotorista) === cleanCpf(detectedCpf) ? (
+                      <Text style={styles.fieldHint}>Usando CPF de {cpfInfo.driverName}</Text>
+                    ) : null}
+                  </View>
+                ) : null}
+                {modalError ? <Text style={styles.modalError}>{modalError}</Text> : null}
                 <View style={styles.modalActions}>
                   <Pressable accessibilityRole="button" onPress={() => setLicenseModalVisible(false)} style={styles.modalCancel}>
                     <Text style={styles.modalCancelText}>Cancelar</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    disabled={!tripLicense.trim() || submitting}
+                    disabled={
+                      !tripLicense.trim() ||
+                      submitting ||
+                      (Boolean(cpfInfo?.requiresDriverCpf) && !cpfReady)
+                    }
                     onPress={continueToLocationDisclosure}
-                    style={[styles.modalConfirm, !tripLicense.trim() || submitting ? styles.disabled : null]}
+                    style={[
+                      styles.modalConfirm,
+                      !tripLicense.trim() ||
+                      submitting ||
+                      (Boolean(cpfInfo?.requiresDriverCpf) && !cpfReady)
+                        ? styles.disabled
+                        : null
+                    ]}
                   >
                     <Text style={styles.modalConfirmText}>Continuar</Text>
                   </Pressable>
@@ -295,8 +404,14 @@ const styles = StyleSheet.create({
   actionCard: { gap: 13, borderRadius: 24, padding: 20, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#dce6e4", boxShadow: "0 7px 22px rgba(15, 45, 49, 0.06)" },
   sectionTitle: { color: "#102a2e", fontSize: 20, fontWeight: "900" },
   description: { color: "#667a7e", fontSize: 14, lineHeight: 20, marginBottom: 5 },
+  cpfCard: { gap: 4, borderRadius: 16, padding: 14, backgroundColor: "#f7faf9", borderWidth: 1, borderColor: "#dce6e4" },
+  cpfLabel: { color: "#243c40", fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.4 },
+  cpfDriver: { color: "#36575c", fontSize: 14, fontWeight: "700" },
+  cpfValue: { color: "#102a2e", fontSize: 20, fontWeight: "900", letterSpacing: 0.3 },
+  cpfHint: { color: "#667a7e", fontSize: 13, lineHeight: 18, marginTop: 2 },
   field: { gap: 7, marginBottom: 4 },
   label: { color: "#243c40", fontSize: 13, fontWeight: "800" },
+  fieldHint: { color: "#667a7e", fontSize: 12, fontWeight: "600" },
   input: { minHeight: 54, borderWidth: 1, borderColor: "#d7e1e2", borderRadius: 15, paddingHorizontal: 16, color: "#102d31", backgroundColor: "#f7faf9", fontSize: 16 },
   modalBackdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(8, 47, 53, 0.55)" },
   modalCard: { gap: 15, borderRadius: 24, padding: 22, backgroundColor: "#ffffff" },
@@ -304,8 +419,8 @@ const styles = StyleSheet.create({
   modalDescription: { color: "#667a7e", fontSize: 14, lineHeight: 20 },
   disclosureText: { color: "#36575c", fontSize: 15, lineHeight: 23 },
   modalError: { color: "#b42318", fontSize: 13, fontWeight: "700" },
-  modalActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 10, paddingTop: 3 },
-  modalCancel: { minHeight: 46, justifyContent: "center", paddingHorizontal: 16, alignSelf: "center" },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, paddingTop: 3 },
+  modalCancel: { minHeight: 46, justifyContent: "center", paddingHorizontal: 16 },
   modalCancelText: { color: "#52676b", fontSize: 15, fontWeight: "800" },
   modalConfirm: { minHeight: 46, justifyContent: "center", borderRadius: 13, paddingHorizontal: 20, backgroundColor: "#0f766e" },
   modalConfirmText: { color: "#ffffff", fontSize: 15, fontWeight: "900" },
