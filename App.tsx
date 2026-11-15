@@ -26,8 +26,9 @@ import {
   restoreSession
 } from "./auth";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatCpf } from "./cpf";
 import { isScreenshotMode, screenshotEmail, screenshotVehicles } from "./screenshot-data";
-import { getVehicles, type Vehicle } from "./vehicle-api";
+import { getDriverProfile, getVehicles, type DriverProfile, type Vehicle } from "./vehicle-api";
 
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -348,6 +349,11 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
   const [loading, setLoading] = useState(!screenshotMode);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [driverProfile, setDriverProfile] = useState<DriverProfile | null>(
+    screenshotMode
+      ? { driverName: "Carlos Almeida", cpfMotorista: "52998224725" }
+      : null
+  );
   const vehicleListContentStyle = useMemo(
     () => [
       styles.vehicleListContent,
@@ -363,6 +369,7 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
   const loadVehicles = useCallback(async (refresh = false) => {
     if (screenshotMode) {
       setVehicles(screenshotVehicles);
+      setDriverProfile({ driverName: "Carlos Almeida", cpfMotorista: "52998224725" });
       setLoading(false);
       setRefreshing(false);
       return;
@@ -371,7 +378,12 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
     try {
       refresh ? setRefreshing(true) : setLoading(true);
       setError("");
-      setVehicles(await getVehicles());
+      const [nextVehicles, nextProfile] = await Promise.all([
+        getVehicles(),
+        getDriverProfile().catch(() => null)
+      ]);
+      setVehicles(nextVehicles);
+      if (nextProfile) setDriverProfile(nextProfile);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Não foi possível carregar os veículos.");
     } finally {
@@ -383,6 +395,10 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
   useEffect(() => {
     loadVehicles();
   }, [loadVehicles]);
+
+  const driverCpfDisplay = driverProfile?.cpfMotorista
+    ? formatCpf(driverProfile.cpfMotorista)
+    : "";
 
   const visibleVehicles = useMemo(() => {
     const query = filter.trim().toLocaleLowerCase("pt");
@@ -411,6 +427,12 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
           <Text style={styles.vehicleEyebrow}>Monitriip Motorista</Text>
           <Text style={styles.vehicleTitle}>Selecione um veículo</Text>
           <Text selectable style={styles.vehicleUser}>{email}</Text>
+          {driverProfile?.driverName ? (
+            <Text selectable style={styles.vehicleDriverName}>{driverProfile.driverName}</Text>
+          ) : null}
+          {driverCpfDisplay ? (
+            <Text selectable style={styles.vehicleDriverCpf}>CPF {driverCpfDisplay}</Text>
+          ) : null}
         </View>
         <View style={styles.vehicleHeaderActions}>
           <Pressable accessibilityRole="button" onPress={() => router.push("/about")} style={styles.aboutButton}>
@@ -707,6 +729,18 @@ const styles = StyleSheet.create({
     color: "#667a7e",
     fontSize: 13,
     paddingTop: 2
+  },
+  vehicleDriverName: {
+    color: "#243c40",
+    fontSize: 14,
+    fontWeight: "800",
+    paddingTop: 4
+  },
+  vehicleDriverCpf: {
+    color: "#667a7e",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2
   },
   searchBox: {
     minHeight: 54,

@@ -124,7 +124,12 @@ async function readSignedInDriverCpf() {
   );
 }
 
-async function getLoggedInDriver(accessToken: string) {
+export type DriverProfile = {
+  driverName: string | null;
+  cpfMotorista: string;
+};
+
+async function getLoggedInDriver(accessToken: string): Promise<DriverProfile> {
   const signedInCpf = await readSignedInDriverCpf();
   let data: { name?: string | null } | null = null;
 
@@ -150,6 +155,11 @@ async function getLoggedInDriver(accessToken: string) {
     driverName: data?.name || null,
     cpfMotorista: readLoggedInDriverCpf(data) || signedInCpf
   };
+}
+
+export async function getDriverProfile(): Promise<DriverProfile> {
+  const accessToken = await getAccessToken();
+  return getLoggedInDriver(accessToken);
 }
 
 export async function getDriverCpfInfo(deviceId: number): Promise<DriverCpfInfo> {
