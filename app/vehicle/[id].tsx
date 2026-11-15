@@ -12,6 +12,7 @@ import {
   View
 } from "react-native";
 import { cleanCpf, formatCpf, formatCpfInput, isValidCpf } from "../../cpf";
+import { tripErrorNeedsDriverCpf } from "../../trip-error";
 import {
   requestTripLocationPermissions,
   startVehicleLocationTracking
@@ -111,12 +112,24 @@ export default function VehicleTripScreen() {
       setSubmitting(true);
       setError("");
       await requestTripLocationPermissions();
-      const result = await toggleVehicleTrip(vehicle, tripLicense, cpf || undefined);
+      const result = await toggleVehicleTrip(vehicle, tripLicense, cpf || cpfInfo?.cpfMotorista || undefined);
+      const tripCpf = result.cpfMotorista || cpf || cpfInfo?.cpfMotorista || undefined;
       setVehicle(result.updatedVehicle);
-      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, cpf || undefined);
+      if (tripCpf) setCpfMotorista(formatCpf(tripCpf));
+      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, tripCpf);
       router.replace({ pathname: "/trip/[id]", params: { id: String(vehicle.id) } });
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "Não foi possível atualizar a viagem.");
+      const message = actionError instanceof Error ? actionError.message : "Não foi possível atualizar a viagem.";
+      setError(message);
+      if (tripErrorNeedsDriverCpf(message)) {
+        setCpfInfo((current) => ({
+          requiresDriverCpf: true,
+          cpfMotorista: current?.cpfMotorista ?? "",
+          driverName: current?.driverName ?? null
+        }));
+        setModalError(message);
+        setLicenseModalVisible(true);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -258,37 +271,34 @@ export default function VehicleTripScreen() {
                     placeholderTextColor="#7b8b90"
                     autoCapitalize="characters"
                     autoCorrect={false}
-                    returnKeyType={showCpf ? "next" : "done"}
-                    onSubmitEditing={showCpf ? undefined : continueToLocationDisclosure}
+                    returnKeyType="next"
                     style={styles.input}
                   />
                 </View>
-                {showCpf ? (
-                  <View style={styles.field}>
-                    <Text style={styles.label}>
-                      CPF do motorista{cpfInfo?.requiresDriverCpf ? " *" : ""}
-                    </Text>
-                    <TextInput
-                      accessibilityLabel="CPF do motorista"
-                      value={cpfMotorista}
-                      onChangeText={(value) => {
-                        setCpfMotorista(formatCpfInput(value));
-                        setModalError("");
-                      }}
-                      placeholder="000.000.000-00"
-                      placeholderTextColor="#7b8b90"
-                      keyboardType="number-pad"
-                      autoCorrect={false}
-                      maxLength={14}
-                      returnKeyType="done"
-                      onSubmitEditing={continueToLocationDisclosure}
-                      style={styles.input}
-                    />
-                    {cpfInfo?.driverName && detectedCpf && cleanCpf(cpfMotorista) === cleanCpf(detectedCpf) ? (
-                      <Text style={styles.fieldHint}>Usando CPF da conta de {cpfInfo.driverName}</Text>
-                    ) : null}
-                  </View>
-                ) : null}
+                <View style={styles.field}>
+                  <Text style={styles.label}>
+                    CPF do motorista{cpfInfo?.requiresDriverCpf ? " *" : ""}
+                  </Text>
+                  <TextInput
+                    accessibilityLabel="CPF do motorista"
+                    value={cpfMotorista}
+                    onChangeText={(value) => {
+                      setCpfMotorista(formatCpfInput(value));
+                      setModalError("");
+                    }}
+                    placeholder="000.000.000-00"
+                    placeholderTextColor="#7b8b90"
+                    keyboardType="number-pad"
+                    autoCorrect={false}
+                    maxLength={14}
+                    returnKeyType="done"
+                    onSubmitEditing={continueToLocationDisclosure}
+                    style={styles.input}
+                  />
+                  {cpfInfo?.driverName && detectedCpf && cleanCpf(cpfMotorista) === cleanCpf(detectedCpf) ? (
+                    <Text style={styles.fieldHint}>Usando CPF da conta de {cpfInfo.driverName}</Text>
+                  ) : null}
+                </View>
                 {modalError ? <Text style={styles.modalError}>{modalError}</Text> : null}
                 <View style={styles.modalActions}>
                   <Pressable accessibilityRole="button" onPress={() => setLicenseModalVisible(false)} style={styles.modalCancel}>

@@ -13,6 +13,28 @@ export function isValidCpf(value: string | null | undefined) {
   });
 }
 
+export function readLoggedInDriverCpf(data: unknown) {
+  if (!data || typeof data !== "object") return "";
+  const record = data as Record<string, unknown>;
+  const attributes =
+    record.attributes && typeof record.attributes === "object"
+      ? (record.attributes as Record<string, unknown>)
+      : {};
+  const candidates = [
+    record.cpfMotorista,
+    record.cpf,
+    attributes.cpfMotorista,
+    attributes.cpf,
+    attributes.notes
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string" && typeof candidate !== "number") continue;
+    const cpf = cleanCpf(String(candidate));
+    if (isValidCpf(cpf)) return cpf;
+  }
+  return "";
+}
+
 export function formatCpf(value: string | null | undefined) {
   const cpf = cleanCpf(value);
   if (cpf.length !== 11) return cpf;

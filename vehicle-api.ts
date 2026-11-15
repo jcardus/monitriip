@@ -1,6 +1,7 @@
 import { fetch } from "expo/fetch";
 import { fetchAuthSession } from "aws-amplify/auth";
-import { cleanCpf } from "./cpf";
+import { cleanCpf, isValidCpf, readLoggedInDriverCpf } from "./cpf";
+import { readTripErrorMessage } from "./trip-error";
 
 const DRIVER_API_URL = process.env.EXPO_PUBLIC_DRIVER_API_URL ?? "https://fieldmap.net/driver";
 const MONITRIIP_TRIP_URL =
@@ -116,44 +117,44 @@ async function getLoggedInDriver(accessToken: string) {
     throw new Error(`Não foi possível carregar o motorista (${response.status}).`);
   }
 
-  const data = (await response.json()) as {
-    name?: string | null;
-    cpfMotorista?: string;
-  };
+  const data = (await response.json()) as { name?: string | null };
   return {
     driverName: data.name || null,
-    cpfMotorista: cleanCpf(data.cpfMotorista)
+    cpfMotorista: readLoggedInDriverCpf(data)
   };
 }
 
 export async function getDriverCpfInfo(deviceId: number): Promise<DriverCpfInfo> {
   const accessToken = await getAccessToken();
   const sessionCookie = await getSessionCookie(accessToken);
-  const [requiredResponse, loggedInDriver] = await Promise.all([
-    fetch(`${MONITRIIP_CPF_URL}/${deviceId}`, {
+  const loggedInDriver = await getLoggedInDriver(accessToken);
+
+  try {
+    const requiredResponse = await fetch(`${MONITRIIP_CPF_URL}/${deviceId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
         Cookie: sessionCookie
       },
       credentials: "include"
-    }),
-    getLoggedInDriver(accessToken)
-  ]);
+    });
 
-  if (!requiredResponse.ok) {
     if (requiredResponse.status === 401) {
       throw new Error("A sessão expirou. Entre novamente.");
     }
-    throw new Error(`Não foi possível verificar o CPF do motorista (${requiredResponse.status}).`);
-  }
+    if (!requiredResponse.ok) {
+      return { requiresDriverCpf: true, ...loggedInDriver };
+    }
 
-  const requiredData = (await requiredResponse.json()) as { requiresDriverCpf?: boolean };
-  return {
-    requiresDriverCpf: Boolean(requiredData.requiresDriverCpf),
-    cpfMotorista: loggedInDriver.cpfMotorista,
-    driverName: loggedInDriver.driverName
-  };
+    const requiredData = (await requiredResponse.json()) as { requiresDriverCpf?: boolean };
+    return {
+      requiresDriverCpf: Boolean(requiredData.requiresDriverCpf),
+      ...loggedInDriver
+    };
+  } catch (error) {
+    if (error instanceof Error && /sessão expirou/i.test(error.message)) throw error;
+    return { requiresDriverCpf: true, ...loggedInDriver };
+  }
 }
 
 export async function toggleVehicleTrip(
@@ -171,7 +172,10 @@ export async function toggleVehicleTrip(
       notes: tripLicense.trim()
     }
   };
-  const cpf = cleanCpf(cpfMotorista);
+  let cpf = cleanCpf(cpfMotorista);
+  if (!isValidCpf(cpf)) {
+    cpf = (await getLoggedInDriver(accessToken)).cpfMotorista;
+  }
   const response = await fetch(MONITRIIP_TRIP_URL, {
     method: "POST",
     headers: {
@@ -181,7 +185,7 @@ export async function toggleVehicleTrip(
       Cookie: sessionCookie
     },
     credentials: "include",
-    body: JSON.stringify(cpf ? { ...updatedVehicle, cpfMotorista: cpf } : updatedVehicle)
+    body: JSON.stringify(isValidCpf(cpf) ? { ...updatedVehicle, cpfMotorista: cpf } : updatedVehicle)
   });
 
   if (!response.ok) {
@@ -190,9 +194,13 @@ export async function toggleVehicleTrip(
     }
 
     const details = await response.text().catch(() => "");
-    throw new Error(details || `Não foi possível atualizar a viagem (${response.status}).`);
+    throw new Error(readTripErrorMessage(details, response.status));
   }
 
   const result = await response.json().catch(() => null) as { mensagem?: string } | null;
-  return { updatedVehicle, message: result?.mensagem };
+  return {
+    updatedVehicle,
+    message: result?.mensagem,
+    cpfMotorista: isValidCpf(cpf) ? cpf : ""
+  };
 }
