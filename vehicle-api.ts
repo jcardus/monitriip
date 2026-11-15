@@ -1,6 +1,7 @@
 import { fetch } from "expo/fetch";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { cleanCpf } from "./cpf";
+import { readTripErrorMessage } from "./trip-error";
 
 const DRIVER_API_URL = process.env.EXPO_PUBLIC_DRIVER_API_URL ?? "https://fieldmap.net/driver";
 const MONITRIIP_TRIP_URL =
@@ -190,7 +191,7 @@ export async function toggleVehicleTrip(
     }
 
     const details = await response.text().catch(() => "");
-    throw new Error(details || `Não foi possível atualizar a viagem (${response.status}).`);
+    throw new Error(readTripErrorMessage(details, response.status));
   }
 
   const result = await response.json().catch(() => null) as { mensagem?: string } | null;
