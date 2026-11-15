@@ -112,9 +112,11 @@ export default function VehicleTripScreen() {
       setSubmitting(true);
       setError("");
       await requestTripLocationPermissions();
-      const result = await toggleVehicleTrip(vehicle, tripLicense, cpf || undefined);
+      const result = await toggleVehicleTrip(vehicle, tripLicense, cpf || cpfInfo?.cpfMotorista || undefined);
+      const tripCpf = result.cpfMotorista || cpf || cpfInfo?.cpfMotorista || undefined;
       setVehicle(result.updatedVehicle);
-      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, cpf || undefined);
+      if (tripCpf) setCpfMotorista(formatCpf(tripCpf));
+      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, tripCpf);
       router.replace({ pathname: "/trip/[id]", params: { id: String(vehicle.id) } });
     } catch (actionError) {
       const message = actionError instanceof Error ? actionError.message : "Não foi possível atualizar a viagem.";
