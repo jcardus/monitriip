@@ -1,5 +1,6 @@
 import { fetch } from "expo/fetch";
 import { fetchAuthSession, fetchUserAttributes, getCurrentUser } from "aws-amplify/auth";
+import { clientHeaders } from "./client-headers";
 import { cleanCpf, isValidCpf, readLoggedInDriverCpf } from "./cpf";
 import { readTripErrorMessage } from "./trip-error";
 
@@ -38,6 +39,10 @@ export type Vehicle = {
   };
 };
 
+function requestHeaders(headers: Record<string, string>) {
+  return { ...clientHeaders(), ...headers };
+}
+
 async function getAccessToken() {
   const session = await fetchAuthSession();
   const accessToken = session.tokens?.accessToken.toString();
@@ -53,10 +58,10 @@ export async function getVehicles(signal?: AbortSignal) {
   const accessToken = await getAccessToken();
 
   const response = await fetch(`${DRIVER_API_URL}/devices`, {
-    headers: {
+    headers: requestHeaders({
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json"
-    },
+    }),
     signal
   });
 
@@ -84,10 +89,10 @@ export type DriverCpfInfo = {
 
 async function getSessionCookie(accessToken: string) {
   const sessionResponse = await fetch(`${DRIVER_API_URL}/session`, {
-    headers: {
+    headers: requestHeaders({
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json"
-    },
+    }),
     credentials: "include"
   });
 
@@ -125,10 +130,10 @@ async function getLoggedInDriver(accessToken: string) {
 
   try {
     const response = await fetch(`${DRIVER_API_URL}/me`, {
-      headers: {
+      headers: requestHeaders({
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json"
-      }
+      })
     });
 
     if (response.status === 401) {
@@ -154,11 +159,11 @@ export async function getDriverCpfInfo(deviceId: number): Promise<DriverCpfInfo>
 
   try {
     const requiredResponse = await fetch(`${MONITRIIP_CPF_URL}/${deviceId}`, {
-      headers: {
+      headers: requestHeaders({
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
         Cookie: sessionCookie
-      },
+      }),
       credentials: "include"
     });
 
@@ -201,12 +206,12 @@ export async function toggleVehicleTrip(
   }
   const response = await fetch(MONITRIIP_TRIP_URL, {
     method: "POST",
-    headers: {
+    headers: requestHeaders({
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
       "Content-Type": "application/json",
       Cookie: sessionCookie
-    },
+    }),
     credentials: "include",
     body: JSON.stringify(isValidCpf(cpf) ? { ...updatedVehicle, cpfMotorista: cpf } : updatedVehicle)
   });

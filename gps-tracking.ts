@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { Alert, Linking } from "react-native";
+import { clientHeaders } from "./client-headers";
 import type { Vehicle } from "./vehicle-api";
 
 const LOCATION_TASK = "monitriip-background-location";
@@ -135,7 +136,7 @@ export async function flushGpsQueue() {
 
   let sentCount = 0;
   for (const sample of pending) {
-    const response = await fetch(buildTraccarUrl(sample), { method: "GET" });
+    const response = await fetch(buildTraccarUrl(sample), { method: "GET", headers: clientHeaders() });
 
     if (!response.ok) {
       const remaining = pending.slice(sentCount);
