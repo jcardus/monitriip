@@ -125,6 +125,10 @@ export function buildTraccarUrl(sample: GpsSample) {
   url.searchParams.set("tripId", sample.tripId);
   url.searchParams.set("deviceLabel", sample.deviceLabel);
   url.searchParams.set("source", sample.source);
+  // Phone GPS can jump continents after tests / bad fixes. Traccar filter.maxSpeed
+  // would then reject every later real position forever (last never updates).
+  // OsmAnd maps this query param onto the position attribute that FilterHandler skips.
+  url.searchParams.set("ignoreMaxSpeedFilter", "true");
   return url.toString();
 }
 
