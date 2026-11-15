@@ -1,6 +1,6 @@
 {
   "name": "monitriip-driver",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
+    "build": "expo export --platform web",
     "update:production": "eas update --channel production",
     "update:preview": "eas update --channel preview"
   },
