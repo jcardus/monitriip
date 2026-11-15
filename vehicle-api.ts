@@ -1,5 +1,5 @@
 import { fetch } from "expo/fetch";
-import { fetchAuthSession } from "aws-amplify/auth";
+import { fetchAuthSession, fetchUserAttributes, getCurrentUser } from "aws-amplify/auth";
 import { cleanCpf, isValidCpf, readLoggedInDriverCpf } from "./cpf";
 import { readTripErrorMessage } from "./trip-error";
 
@@ -102,25 +102,48 @@ async function getSessionCookie(accessToken: string) {
   return (await sessionResponse.json()) as string;
 }
 
-async function getLoggedInDriver(accessToken: string) {
-  const response = await fetch(`${DRIVER_API_URL}/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json"
-    }
-  });
+async function readSignedInDriverCpf() {
+  const [session, attributes, currentUser] = await Promise.all([
+    fetchAuthSession(),
+    fetchUserAttributes().catch(() => ({})),
+    getCurrentUser().catch(() => null)
+  ]);
+  return (
+    readLoggedInDriverCpf(attributes) ||
+    readLoggedInDriverCpf(session.tokens?.idToken?.payload) ||
+    readLoggedInDriverCpf(session.tokens?.accessToken?.payload) ||
+    readLoggedInDriverCpf({
+      username: currentUser?.username,
+      loginId: currentUser?.signInDetails?.loginId
+    })
+  );
+}
 
-  if (!response.ok) {
+async function getLoggedInDriver(accessToken: string) {
+  const signedInCpf = await readSignedInDriverCpf();
+  let data: { name?: string | null } | null = null;
+
+  try {
+    const response = await fetch(`${DRIVER_API_URL}/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json"
+      }
+    });
+
     if (response.status === 401) {
       throw new Error("A sessão expirou. Entre novamente.");
     }
-    throw new Error(`Não foi possível carregar o motorista (${response.status}).`);
+    if (response.ok) {
+      data = (await response.json()) as { name?: string | null };
+    }
+  } catch (error) {
+    if (error instanceof Error && /sessão expirou/i.test(error.message)) throw error;
   }
 
-  const data = (await response.json()) as { name?: string | null };
   return {
-    driverName: data.name || null,
-    cpfMotorista: readLoggedInDriverCpf(data)
+    driverName: data?.name || null,
+    cpfMotorista: readLoggedInDriverCpf(data) || signedInCpf
   };
 }
 
