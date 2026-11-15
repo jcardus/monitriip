@@ -53,7 +53,8 @@
     "extra": {
       "eas": {
         "projectId": "c47748e4-310b-4996-9b54-a79ee0c0f5d9"
-      }
+      },
+      "latestStoreVersion": "0.1.2"
     },
     "owner": "jcardeira"
   }
