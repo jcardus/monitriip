@@ -28,6 +28,7 @@ import {
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatCpf } from "./cpf";
 import { isScreenshotMode, screenshotEmail, screenshotVehicles } from "./screenshot-data";
+import { promptStoreUpdateIfNeeded } from "./store-update";
 import { getDriverProfile, getVehicles, type DriverProfile, type Vehicle } from "./vehicle-api";
 
 function createId(prefix: string) {
@@ -55,6 +56,14 @@ function AppContent() {
     restoreSession()
       .then(setAuthenticatedUser)
       .finally(() => setRestoringSession(false));
+  }, [screenshotMode]);
+
+  useEffect(() => {
+    if (screenshotMode) return;
+    const timer = setTimeout(() => {
+      promptStoreUpdateIfNeeded().catch(() => undefined);
+    }, 800);
+    return () => clearTimeout(timer);
   }, [screenshotMode]);
 
   async function logout() {
