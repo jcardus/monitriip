@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { Alert, Linking, Platform } from "react-native";
 
-const IOS_STORE_URL = "https://apps.apple.com/app/id6792935618";
+const IOS_STORE_URL = "https://apps.apple.com/br/app/monitriip-driver/id6792935618";
 const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.monitriip.driver";
 
 function parseVersion(value: string | null | undefined) {
@@ -45,7 +45,7 @@ export async function promptStoreUpdateIfNeeded() {
         text: "Atualizar",
         onPress: () => {
           Linking.openURL(storeUrl()).catch(() => {
-            Alert.alert("Não foi possível abrir a loja", "Procure por “Monitriip Driver” na App Store ou no Google Play.");
+            Alert.alert("Não foi possível abrir a loja", `Abra o link do app: ${storeUrl()}`);
           });
         }
       }

@@ -64,6 +64,14 @@ npm run update:production -- --message "Describe the update"
 
 Use a new iOS/Android build whenever native code, permissions, plugins, Expo SDK, or native dependencies change.
 
+## App link
+
+The app is not publicly listed on the App Store, so search will not find it. Use the direct link:
+
+- iOS: https://apps.apple.com/br/app/monitriip-driver/id6792935618
+
+The same URL is used by the update prompt in `store-update.ts`.
+
 ## Store upload automation
 
 Run `.eas/workflows/build-and-submit.yml` manually when native changes require new iOS and Android binaries. The workflow queues EAS production builds for iOS and Android, then submits successful builds to App Store Connect/TestFlight and Google Play.
