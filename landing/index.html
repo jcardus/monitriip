@@ -16,8 +16,11 @@
   .hero { display:grid; grid-template-columns:1.2fr 1fr; gap:40px; align-items:center; padding:40px 0 60px; }
   h1 { font-size:2.4rem; line-height:1.15; margin:0 0 16px; }
   .lead { color:var(--muted); font-size:1.1rem; margin:0 0 28px; }
+  .actions { display:flex; flex-wrap:wrap; gap:12px; }
   .btn { display:inline-block; background:var(--ink); color:#fff; text-decoration:none; padding:14px 24px; border-radius:12px; font-weight:600; }
   .btn:hover { background:var(--brand); }
+  .btn.secondary { background:#fff; color:var(--ink); border:1px solid #d0dae5; }
+  .btn.secondary:hover { background:var(--brand); color:#fff; border-color:var(--brand); }
   .note { color:var(--muted); font-size:.9rem; margin-top:12px; }
   .shots { display:flex; gap:16px; justify-content:center; }
   .shots img { width:48%; border-radius:18px; box-shadow:0 12px 32px rgba(20,32,46,.18); }
@@ -38,8 +41,11 @@
     <div>
       <h1>Registro de viagens para motoristas de ônibus</h1>
       <p class="lead">Inicie a viagem, deixe o GPS trabalhar em segundo plano e registre embarques e ocorrências, mesmo sem conexão.</p>
-      <a class="btn" href="https://apps.apple.com/br/app/monitriip-driver/id6792935618">Baixar na App Store</a>
-      <p class="note">O app ainda não aparece na busca da App Store. Use sempre este botão.</p>
+      <div class="actions">
+        <a class="btn" href="https://apps.apple.com/br/app/monitriip-driver/id6792935618">Baixar na App Store</a>
+        <a class="btn secondary" href="https://play.google.com/store/apps/details?id=com.monitriip.driver">Baixar no Google Play</a>
+      </div>
+      <p class="note">O app ainda não aparece na busca da App Store. Use sempre o botão acima para instalar no iOS.</p>
     </div>
     <div class="shots">
       <img src="shot-1.png" alt="Tela de veículos do Monitriip Driver">
@@ -54,7 +60,7 @@
     <div class="card"><h3>Exportação</h3><p>Exporte os dados da viagem em JSON para conferência ou integração.</p></div>
   </section>
 
-  <footer>Monitriip Driver · Disponível para iPhone e iPad</footer>
+  <footer>Monitriip Driver · Disponível para iOS e Android</footer>
 </div>
 </body>
 </html>

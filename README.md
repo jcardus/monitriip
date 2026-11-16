@@ -68,7 +68,9 @@ Use a new iOS/Android build whenever native code, permissions, plugins, Expo SDK
 
 The app is not publicly listed on the App Store, so search will not find it. Use the direct link:
 
-- iOS: https://apps.apple.com/br/app/monitriip-driver/id6792935618
+- Landing page: https://monitriip-driver.pages.dev
+- iOS (App Store): https://apps.apple.com/br/app/monitriip-driver/id6792935618
+- Android (Google Play): https://play.google.com/store/apps/details?id=com.monitriip.driver
 
 The same URL is used by the update prompt in `store-update.ts`.
 
