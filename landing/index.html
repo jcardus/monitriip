@@ -3,17 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monitriip Driver — registro de viagens para motoristas</title>
-<meta name="description" content="App para motoristas de ônibus registrarem viagens com GPS em segundo plano, embarques e ocorrências.">
+<title>Monitriip Driver por Nogarte — Aplicativo do Motorista para Monitriip ANTT</title>
+<meta name="description" content="Baixe o Monitriip Driver, aplicativo comercializado pela Nogarte para motoristas de ônibus e frotas de transporte rodoviário de passageiros. Registro de viagens Monitriip ANTT com GPS em segundo plano, embarques e ocorrências.">
+<meta name="keywords" content="Monitriip Driver, Nogarte, Nogartel, Monitriip ANTT, aplicativo motorista ônibus, rastreamento de ônibus, transporte rodoviário de passageiros, fretamento ANTT, telemetria de frotas">
+<meta name="author" content="Nogarte">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#14202e">
+<meta name="apple-itunes-app" content="app-id=6792935618">
+
+<link rel="canonical" href="https://monitriip-driver.pages.dev/">
 <link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+
+<!-- Open Graph / WhatsApp / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Monitriip Driver · Nogarte">
+<meta property="og:title" content="Monitriip Driver por Nogarte — App do Motorista (iOS e Android)">
+<meta property="og:description" content="Solução da Nogarte para motoristas de ônibus registrarem viagens Monitriip ANTT com GPS em segundo plano, embarques e ocorrências. Baixe na App Store ou Google Play.">
+<meta property="og:url" content="https://monitriip-driver.pages.dev/">
+<meta property="og:image" content="https://monitriip-driver.pages.dev/og-image.png">
+<meta property="og:image:width" content="1024">
+<meta property="og:image:height" content="500">
+<meta property="og:image:alt" content="Monitriip Driver por Nogarte — Aplicativo do motorista para viagens monitoradas">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Monitriip Driver por Nogarte — App do Motorista (iOS e Android)">
+<meta name="twitter:description" content="Aplicativo comercializado pela Nogarte para registro de viagens Monitriip ANTT, embarques e ocorrências com GPS em segundo plano.">
+<meta name="twitter:image" content="https://monitriip-driver.pages.dev/og-image.png">
+
+<!-- Dados estruturados (Schema.org) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MobileApplication",
+  "name": "Monitriip Driver",
+  "operatingSystem": "iOS, Android",
+  "applicationCategory": "BusinessApplication",
+  "inLanguage": "pt-BR",
+  "description": "Aplicativo comercializado pela Nogarte para motoristas de ônibus registrarem viagens com GPS em segundo plano, embarques de passageiros e ocorrências operacionais no padrão Monitriip ANTT.",
+  "url": "https://monitriip-driver.pages.dev/",
+  "image": "https://monitriip-driver.pages.dev/icon.png",
+  "screenshot": [
+    "https://monitriip-driver.pages.dev/shot-1.png",
+    "https://monitriip-driver.pages.dev/shot-2.png"
+  ],
+  "installUrl": [
+    "https://apps.apple.com/br/app/monitriip-driver/id6792935618",
+    "https://play.google.com/store/apps/details?id=com.monitriip.driver"
+  ],
+  "publisher": {
+    "@type": "Organization",
+    "name": "Nogarte"
+  },
+  "offers": {
+    "@type": "Offer",
+    "seller": {
+      "@type": "Organization",
+      "name": "Nogarte"
+    }
+  }
+}
+</script>
+
 <style>
-  :root { --bg:#f6f8fb; --ink:#14202e; --muted:#5a6a7c; --brand:#1f6feb; }
+  :root { --bg:#f6f8fb; --ink:#14202e; --muted:#5a6a7c; --brand:#1f6feb; --badge-bg:#e6f0ff; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
   .wrap { max-width:960px; margin:0 auto; padding:0 20px; }
-  header { padding:20px 0; display:flex; align-items:center; gap:12px; font-weight:700; }
+  header { padding:20px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; }
+  .brand-row { display:flex; align-items:center; gap:12px; }
   header img { width:40px; height:40px; border-radius:10px; }
-  .hero { display:grid; grid-template-columns:1.2fr 1fr; gap:40px; align-items:center; padding:40px 0 60px; }
+  .company-pill { background:var(--badge-bg); color:var(--brand); font-size:.82rem; font-weight:700; padding:6px 12px; border-radius:999px; letter-spacing:.02em; }
+  .hero { display:grid; grid-template-columns:1.2fr 1fr; gap:40px; align-items:center; padding:36px 0 60px; }
+  .eyebrow { display:inline-block; color:var(--brand); font-weight:700; font-size:.9rem; margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em; }
   h1 { font-size:2.4rem; line-height:1.15; margin:0 0 16px; }
   .lead { color:var(--muted); font-size:1.1rem; margin:0 0 28px; }
   .actions { display:flex; flex-wrap:wrap; gap:12px; }
@@ -25,42 +89,62 @@
   .shots { display:flex; gap:16px; justify-content:center; }
   .shots img { width:48%; border-radius:18px; box-shadow:0 12px 32px rgba(20,32,46,.18); }
   .shots img + img { margin-top:40px; }
-  .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; padding-bottom:60px; }
+  .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; padding-bottom:44px; }
   .card { background:#fff; border-radius:16px; padding:22px; box-shadow:0 2px 10px rgba(20,32,46,.06); }
-  .card h3 { margin:0 0 6px; font-size:1.05rem; }
+  .card h2 { margin:0 0 6px; font-size:1.05rem; }
   .card p { margin:0; color:var(--muted); font-size:.95rem; }
-  footer { border-top:1px solid #dde4ec; padding:24px 0 40px; color:var(--muted); font-size:.9rem; }
+  .about-nogarte { background:#fff; border-radius:18px; padding:28px; margin-bottom:56px; box-shadow:0 2px 10px rgba(20,32,46,.06); border:1px solid #e4ebf3; }
+  .about-nogarte h2 { margin:0 0 10px; font-size:1.25rem; }
+  .about-nogarte p { margin:0; color:var(--muted); font-size:.98rem; }
+  footer { border-top:1px solid #dde4ec; padding:24px 0 40px; color:var(--muted); font-size:.9rem; display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; }
   @media (max-width:760px) { .hero { grid-template-columns:1fr; } h1 { font-size:1.9rem; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header><img src="icon.png" alt=""> Monitriip Driver</header>
+  <header>
+    <div class="brand-row">
+      <img src="icon.png" alt="Ícone do Monitriip Driver">
+      <span>Monitriip Driver</span>
+    </div>
+    <span class="company-pill">Solução Nogarte</span>
+  </header>
 
-  <section class="hero">
-    <div>
-      <h1>Registro de viagens para motoristas de ônibus</h1>
-      <p class="lead">Inicie a viagem, deixe o GPS trabalhar em segundo plano e registre embarques e ocorrências, mesmo sem conexão.</p>
-      <div class="actions">
-        <a class="btn" href="https://apps.apple.com/br/app/monitriip-driver/id6792935618">Baixar na App Store</a>
-        <a class="btn secondary" href="https://play.google.com/store/apps/details?id=com.monitriip.driver">Baixar no Google Play</a>
+  <main>
+    <section class="hero">
+      <div>
+        <span class="eyebrow">Comercializado pela Nogarte</span>
+        <h1>Registro de viagens Monitriip para motoristas de ônibus</h1>
+        <p class="lead">Aplicativo oficial fornecido pela <strong>Nogarte</strong> para frotas de transporte rodoviário de passageiros. Inicie a viagem, deixe o GPS trabalhar em segundo plano e registre embarques e ocorrências operacionais mesmo sem conexão.</p>
+        <div class="actions">
+          <a class="btn" href="https://apps.apple.com/br/app/monitriip-driver/id6792935618">Baixar na App Store</a>
+          <a class="btn secondary" href="https://play.google.com/store/apps/details?id=com.monitriip.driver">Baixar no Google Play</a>
+        </div>
+        <p class="note">O app iOS é distribuído por link direto e não aparece na busca da App Store. Use sempre o botão acima para instalar no iPhone ou iPad.</p>
       </div>
-      <p class="note">O app ainda não aparece na busca da App Store. Use sempre o botão acima para instalar no iOS.</p>
-    </div>
-    <div class="shots">
-      <img src="shot-1.png" alt="Tela de veículos do Monitriip Driver">
-      <img src="shot-2.png" alt="Tela de viagem ativa do Monitriip Driver">
-    </div>
-  </section>
+      <div class="shots">
+        <img src="shot-1.png" alt="Tela de seleção de veículos no Monitriip Driver da Nogarte" loading="eager">
+        <img src="shot-2.png" alt="Tela de viagem ativa com GPS em segundo plano no Monitriip Driver" loading="eager">
+      </div>
+    </section>
 
-  <section class="features">
-    <div class="card"><h3>GPS em segundo plano</h3><p>Rastreamento contínuo durante a viagem, com o celular bloqueado.</p></div>
-    <div class="card"><h3>Funciona offline</h3><p>As posições ficam em fila e são enviadas quando a conexão volta.</p></div>
-    <div class="card"><h3>Embarques e ocorrências</h3><p>Registre passageiros e eventos operacionais durante o trajeto.</p></div>
-    <div class="card"><h3>Exportação</h3><p>Exporte os dados da viagem em JSON para conferência ou integração.</p></div>
-  </section>
+    <section class="features" aria-label="Recursos do aplicativo">
+      <article class="card"><h2>GPS em segundo plano</h2><p>Rastreamento contínuo da viagem mesmo com a tela do celular bloqueada ou em uso com outros aplicativos.</p></article>
+      <article class="card"><h2>Operação offline</h2><p>As posições de GPS ficam armazenadas em fila segura no aparelho e são sincronizadas assim que a conexão retorna.</p></article>
+      <article class="card"><h2>Embarques e ocorrências</h2><p>Registre passageiros embarcados, paradas e eventos operacionais exigidos no acompanhamento da viagem.</p></article>
+      <article class="card"><h2>Auditoria e exportação</h2><p>Exporte as evidências operacionais da viagem em JSON para conferência, suporte técnico ou integração.</p></article>
+    </section>
 
-  <footer>Monitriip Driver · Disponível para iOS e Android</footer>
+    <section class="about-nogarte" aria-label="Sobre a Nogarte">
+      <h2>Sobre a solução Monitriip Driver da Nogarte</h2>
+      <p>O <strong>Monitriip Driver</strong> é comercializado pela <strong>Nogarte</strong> para empresas de ônibus, fretamento e transporte rodoviário coletivo de passageiros que precisam cumprir os requisitos operacionais do <strong>Monitriip (ANTT)</strong> com praticidade para o motorista e confiabilidade na transmissão de dados.</p>
+    </section>
+  </main>
+
+  <footer>
+    <span><strong>Monitriip Driver</strong> · Comercializado pela <strong>Nogarte</strong></span>
+    <span>Disponível para iOS (iPhone e iPad) e Android</span>
+  </footer>
 </div>
 </body>
 </html>

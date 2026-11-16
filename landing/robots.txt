@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://monitriip-driver.pages.dev/sitemap.xml
