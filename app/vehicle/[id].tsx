@@ -14,7 +14,9 @@ import {
 import { cleanCpf, formatCpf, formatCpfInput, isValidCpf } from "../../cpf";
 import { tripErrorNeedsDriverCpf } from "../../trip-error";
 import {
+  createTripStartId,
   requestTripLocationPermissions,
+  sendTripStartPosition,
   startVehicleLocationTracking
 } from "../../gps-tracking";
 import { isScreenshotMode, screenshotVehicles } from "../../screenshot-data";
@@ -22,6 +24,7 @@ import {
   getDriverCpfInfo,
   getVehicles,
   toggleVehicleTrip,
+  waitForVehiclePosition,
   type DriverCpfInfo,
   type Vehicle
 } from "../../vehicle-api";
@@ -112,11 +115,16 @@ export default function VehicleTripScreen() {
       setSubmitting(true);
       setError("");
       await requestTripLocationPermissions();
+      // Make sure Traccar has a position for the vehicle before startTrip, so
+      // the backend doesn't send 0,0 to ANTT (ticket #335).
+      const tripId = createTripStartId(vehicle);
+      await sendTripStartPosition(vehicle, tripId);
+      await waitForVehiclePosition(vehicle.id, vehicle.positionId);
       const result = await toggleVehicleTrip(vehicle, tripLicense, cpf || cpfInfo?.cpfMotorista || undefined);
       const tripCpf = result.cpfMotorista || cpf || cpfInfo?.cpfMotorista || undefined;
       setVehicle(result.updatedVehicle);
       if (tripCpf) setCpfMotorista(formatCpf(tripCpf));
-      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, tripCpf);
+      await startVehicleLocationTracking(result.updatedVehicle, tripLicense, tripCpf, tripId);
       router.replace({ pathname: "/trip/[id]", params: { id: String(vehicle.id) } });
     } catch (actionError) {
       const message = actionError instanceof Error ? actionError.message : "Não foi possível atualizar a viagem.";

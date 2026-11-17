@@ -81,6 +81,44 @@ export async function getVehicles(signal?: AbortSignal) {
   return (data as Vehicle[]).sort((a, b) => a.name.trim().localeCompare(b.name.trim(), "pt"));
 }
 
+function hasPosition(vehicle: Vehicle | undefined) {
+  return Boolean(
+    vehicle &&
+      ((vehicle.positionId ?? 0) > 0 ||
+        (vehicle.position?.latitude != null && vehicle.position?.longitude != null))
+  );
+}
+
+// Polls /devices until Traccar shows a position for the vehicle that is newer
+// than the one it had before (positionId changed). Gives up after timeoutMs.
+// Returns true if a new position was seen; false on timeout if the vehicle
+// already had some position; throws on timeout if it has no position at all,
+// because startTrip would then send 0,0 to ANTT.
+export async function waitForVehiclePosition(
+  vehicleId: number,
+  previousPositionId: number | undefined,
+  timeoutMs = 30000,
+  intervalMs = 3000
+) {
+  const deadline = Date.now() + timeoutMs;
+  let latest: Vehicle | undefined;
+  while (true) {
+    const vehicles = await getVehicles();
+    latest = vehicles.find((item) => String(item.id) === String(vehicleId));
+    if (hasPosition(latest) && (latest?.positionId ?? 0) !== (previousPositionId ?? 0)) {
+      return true;
+    }
+    if (Date.now() + intervalMs > deadline) break;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  if (hasPosition(latest)) {
+    return false;
+  }
+  throw new Error(
+    "A posição do telefone ainda não chegou ao servidor. Aguarde alguns segundos e tente novamente."
+  );
+}
+
 export type DriverCpfInfo = {
   requiresDriverCpf: boolean;
   cpfMotorista: string;
