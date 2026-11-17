@@ -171,6 +171,46 @@ export async function requestTripLocationPermissions() {
   }
 }
 
+// Sends one phone fix straight to Traccar (via the OsmAnd worker) before the
+// trip is started, so the backend's startTrip finds a position for the vehicle
+// instead of falling back to 0,0. Throws if no fix or the send fails.
+export async function sendTripStartPosition(vehicle: Vehicle, tripId: string) {
+  const uniqueId = getVehicleUniqueId(vehicle);
+  if (!uniqueId) {
+    throw new Error("Este veículo não possui uniqueId para envio ao Traccar.");
+  }
+
+  let location: Location.LocationObject;
+  try {
+    location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+  } catch (error) {
+    throw new Error("Não foi possível obter a localização do telefone. Verifique o GPS e tente novamente.");
+  }
+
+  const sample = locationToGpsSample(
+    {
+      id: tripId,
+      vehicleId: vehicle.id,
+      vehicleName: vehicle.name,
+      vehiclePlate: vehicle.attributes?.license_plate || "",
+      uniqueId,
+      tripLicense: "",
+      startedAt: new Date().toISOString(),
+      status: "active"
+    },
+    location
+  );
+
+  const response = await fetch(buildTraccarUrl(sample), { method: "GET", headers: clientHeaders() });
+  if (!response.ok) {
+    throw new Error(`Envio da posição inicial falhou com ${response.status}. Tente novamente.`);
+  }
+}
+
+export function createTripStartId(vehicle: Vehicle) {
+  return createTripId(vehicle);
+}
+
 export async function getActiveTrip() {
   const trip = await readJson<TrackingTrip | null>(TRIP_KEY, null);
   return trip && trip.status === "active" ? trip : null;
@@ -179,7 +219,8 @@ export async function getActiveTrip() {
 export async function startVehicleLocationTracking(
   vehicle: Vehicle,
   tripLicense: string,
-  cpfMotorista?: string
+  cpfMotorista?: string,
+  tripId?: string
 ) {
   const uniqueId = getVehicleUniqueId(vehicle);
   if (!uniqueId) {
@@ -187,7 +228,7 @@ export async function startVehicleLocationTracking(
   }
 
   const trip: TrackingTrip = {
-    id: createTripId(vehicle),
+    id: tripId || createTripId(vehicle),
     vehicleId: vehicle.id,
     vehicleName: vehicle.name,
     vehiclePlate: vehicle.attributes?.license_plate || "",
