@@ -551,7 +551,7 @@ function VehicleRow({ vehicle, onPress }: VehicleRowProps) {
   const ignition = Boolean(vehicle.position?.attributes?.ignition);
   const onTrip = Boolean(vehicle.attributes?.monitrip);
   const plate = vehicle.attributes?.license_plate;
-  const address = vehicle.position?.address?.trim();
+  const address = formatVehicleAddress(vehicle.position?.address);
 
   return (
     <Pressable
@@ -594,6 +594,33 @@ function VehicleRow({ vehicle, onPress }: VehicleRowProps) {
       <Text style={styles.vehicleChevron}>›</Text>
     </Pressable>
   );
+}
+
+/** Collapse "São Paulo, São Paulo" / "Lorena, Lorena" and drop trailing country codes from geocoder output. */
+function formatVehicleAddress(value?: string | null) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parts = value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const deduped: string[] = [];
+  for (const part of parts) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.localeCompare(part, "pt-BR", { sensitivity: "accent" }) === 0) {
+      continue;
+    }
+    deduped.push(part);
+  }
+
+  while (deduped.length > 0 && /^(BR|Brasil|Brazil)$/i.test(deduped[deduped.length - 1])) {
+    deduped.pop();
+  }
+
+  return deduped.length ? deduped.join(", ") : undefined;
 }
 
 function formatVehicleUpdate(value?: string) {
