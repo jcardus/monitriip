@@ -416,7 +416,7 @@ function DriverConsole({ email, onLogout, screenshotMode = false }: DriverConsol
     }
 
     return vehicles.filter((vehicle) =>
-      [vehicle.name, vehicle.attributes?.license_plate, vehicle.position?.address]
+      [vehicle.name, vehicle.attributes?.license_plate]
         .filter(Boolean)
         .some((value) => String(value).toLocaleLowerCase("pt").includes(query))
     );
@@ -551,7 +551,6 @@ function VehicleRow({ vehicle, onPress }: VehicleRowProps) {
   const ignition = Boolean(vehicle.position?.attributes?.ignition);
   const onTrip = Boolean(vehicle.attributes?.monitrip);
   const plate = vehicle.attributes?.license_plate;
-  const address = vehicle.position?.address?.trim();
 
   return (
     <Pressable
@@ -585,11 +584,6 @@ function VehicleRow({ vehicle, onPress }: VehicleRowProps) {
           {plate ? <Text selectable style={styles.vehiclePlate}>{plate}</Text> : null}
           <Text selectable style={styles.vehicleUpdated}>{formatVehicleUpdate(vehicle.lastUpdate)}</Text>
         </View>
-        {address ? (
-          <Text selectable numberOfLines={2} style={styles.vehicleAddress}>
-            {address}
-          </Text>
-        ) : null}
       </View>
       <Text style={styles.vehicleChevron}>›</Text>
     </Pressable>
@@ -915,11 +909,6 @@ const styles = StyleSheet.create({
   vehicleUpdated: {
     color: "#718387",
     fontSize: 12
-  },
-  vehicleAddress: {
-    color: "#526a6e",
-    fontSize: 13,
-    lineHeight: 18
   },
   vehicleChevron: {
     color: "#7b8e91",
